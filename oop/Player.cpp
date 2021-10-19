@@ -10,7 +10,7 @@ Player::Player(World* w, Camera* c, glm::vec3 p) : world(w), position(p), camera
 	shift = false;
 	sprint = false;
 	grounded = false;
-	flight = false;
+	flight = true;
 	speed = 0.3f;
 
 	selectedCube = glm::ivec3(0);
@@ -46,7 +46,7 @@ void Player::update()
 
 	
 
-	if (Physics::collideEntity(position, glm::vec3(0, -0.6, 0), camera->getRotation(), world->getMap(), world->getSize()) == position)
+	if (Physics::collideEntity(position, glm::vec3(0, -0.3, 0), camera->getRotation(), world->getMap(), world->getSize()) == position)
 		grounded = true;
 	else
 		grounded = false;
@@ -58,13 +58,13 @@ void Player::update()
 		velocity.y = max(0.f, velocity.y);
 
 
-	if (Physics::collideEntity(position, glm::vec3(0, 0.6, 0), camera->getRotation(), world->getMap(), world->getSize()) == position)
+	if (Physics::collideEntity(position, glm::vec3(0, 0.4, 0), camera->getRotation(), world->getMap(), world->getSize()) == position && !flight)
 		velocity.y = min(velocity.y, -0.1f);
 
 
 	glm::vec3 posBackup = position;
 	position = Physics::collideEntity(position, (movement * (shift ? 0.5f : 1.f) + velocity) * speed, camera->getRotation(), world->getMap(), world->getSize());
-	if ((grounded && shift && !(Physics::collideEntity(position, glm::vec3(0, -0.6, 0), camera->getRotation(), world->getMap(), world->getSize()) == position)))
+	if ((grounded && shift && !(Physics::collideEntity(position, glm::vec3(0, -0.4, 0), camera->getRotation(), world->getMap(), world->getSize()) == position)))
 		position = posBackup;
 	position = world->updateLoaded(position);
 	camera->setOrigin(position);
@@ -79,7 +79,7 @@ void Player::update()
 
 void Player::attack()
 {
-	if (breakDelay == 0 && grounded)
+	if (breakDelay == 0 && (grounded || flight))
 	{
 		glm::ivec3 cube = selectedCube;
 		if (cube.x != 999)

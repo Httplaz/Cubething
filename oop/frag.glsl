@@ -1,38 +1,24 @@
-#version 430 core
-in vec3 ourColor;
-in vec2 TexCoord;
-
+#version 330 core
+in vec2 fragPos;
+in vec3 direction;
 out vec4 color;
 
 uniform sampler2D texAtlas;
 uniform vec3 origin;
 uniform ivec3 selectedCube;
-uniform ivec3 selectedCubeNormale = ivec3(0,1,0);
+uniform ivec3 selectedCubeNormale;
 uniform sampler3D voxels;
-
-uniform mat4 rotation;
-
-float c = 1920./1080.;
 
 vec3 normales[] = {vec3(0.,0., -1.), vec3(-1., 0., 0.), vec3(0., -1., 0.), vec3(0.,0.,1.), vec3(1.,0.,0.), vec3(0., 1., 0.)};
 
 float tilesetSize = 128.;
 float renderDistanceSteps = 60.;
-float renderDistanceCubes = 25.;
+float renderDistanceMeters = 30.;
 
 vec2 getCube(vec3 x)
 {
-
     vec4 g = texelFetch(voxels, (ivec3(x)), 0);
-
-    //if(g.x==1.)
-        //return vec2(1., 1.);
-    //return vec4(g.xyz, 1.);
-
-    //if(g.x==0.)
-        //return vec2(1., 1.);
-
-    return vec2(g.xy*255.);
+    return vec2(g.zy*255.);
 }
 
 vec3 getNormale(vec3 pos, vec3 cube)
@@ -61,11 +47,11 @@ vec3 getNormale(vec3 pos, vec3 cube)
 
 vec4 raycast(vec3 pos, vec3 dir)
 {
-    vec3 lightPos = pos;
+    vec3 lightPos = pos+vec3(0.,5.,0.);
     vec4 fcolor = vec4(0.5, 0.4, 0.5, 0.1);
     float ray = 0.;
     float ray0 = length(dir);
-    for (int i=0; i<renderDistanceSteps && ray<renderDistanceCubes; i++)
+    for (int i=0; i<renderDistanceSteps && ray<renderDistanceMeters && !(pos.y>64. && dir.y>0.); i++)
     {
         vec3 sdir = sign(dir);
         vec3 dist = (vec3(1., 1., 1.) - fract(pos))*(sdir+vec3(1.))/2. + fract(pos)*(sdir-vec3(1.))/-2. + 1e-4;
@@ -73,9 +59,11 @@ vec4 raycast(vec3 pos, vec3 dir)
         float m = min(prior.x, min(prior.y, prior.z));
         pos+=dir*m;
         ray+=length(dir*m);
+        if(ray>renderDistanceMeters+0.2)
+            return fcolor;
         vec3 cube = floor(pos);
         vec2 c = getCube(cube); //cube id + side difference bool
-        if(c.x>=1.) //if not air render
+        if(c.x>=1.) //if not air and in the circle render
         {
             vec3 normale = getNormale(pos, cube); //side-relative position + side number
             vec3 norm = normales[int(normale.z)];
@@ -88,12 +76,11 @@ vec4 raycast(vec3 pos, vec3 dir)
             float spec = pow(max(dot(dir, reflectDir), 0.0), 32.) * spectacularPower;
             
             vec2 uv = vec2((normale.x + c.x-1)/tilesetSize, 1-normale.y);
-            //uv.x+=(cube.x-1)/tilesetSize;
             if(c.y==1)
                 uv.x += 1/tilesetSize*normale.z;
             vec4 special = vec4(1.);
             if(cube==selectedCube && norm == selectedCubeNormale)
-                special = vec4(0.2);
+                special = vec4(1.5,0.2,0.2,1.);
             return vec4(texture(texAtlas, uv))*(diff+ambient+spec) * special;
         }
   
@@ -105,12 +92,7 @@ vec4 raycast(vec3 pos, vec3 dir)
 
 void main()
 {
-    vec3 pos = origin;
-    vec2 fragPos = (TexCoord-vec2(0.5,0.5))*2;
-    fragPos*=sin(35.*0.0174533) / cos(35.*0.0174533);
-    vec3 camPos = vec3(0.,0.,-1.);
-    vec3 direction = (vec4(normalize(vec3(fragPos.x*c, fragPos.y, 0.) - camPos), 1.)*rotation).xyz;
-    color = raycast(pos, direction);
-    if(abs(fragPos.x)<0.001 && abs(fragPos.y)<0.001)
+    color = raycast(origin, direction);
+    if(abs(fragPos.x)<0.0015 && abs(fragPos.y)<0.0025)
         color = vec4(1.);
 }

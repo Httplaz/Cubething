@@ -58,6 +58,9 @@ const double fpsLimit = 1.0 / 60.0;
 double lastUpdateTime = 0;  // number of seconds since the last loop
 double lastFrameTime = 0;   // number of seconds since the last frame
 
+int maxLogTime = 100;
+int logTime = 400;
+
 
 
 // The MAIN function, from here we start the application and run the game loop
@@ -98,11 +101,11 @@ int main()
 
     // Set up vertex data (and buffer(s)) and attribute pointers
     GLfloat vertices[] = {
-        // Позиции          // Цвета             // Текстурные координаты
-         1.f,  1.f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 0.0f,   // Верхний правый
-         1.f, -1.f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 1.0f,   // Нижний правый
-        -1.f, -1.f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 1.0f,   // Нижний левый
-        -1.f,  1.f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 0.0f    // Верхний левый
+        // Позиции          // Текстурные координаты
+         1.f,  1.f, 0.0f,   1.0f, -1.0f,   // Верхний правый
+         1.f, -1.f, 0.0f,   1.0f, 1.0f,   // Нижний правый
+        -1.f, -1.f, 0.0f,   -1.0f, 1.0f,   // Нижний левый
+        -1.f,  1.f, 0.0f,   -1.0f, -1.0f    // Верхний левый
     };
     GLuint indices[] =
     {  // Помните, что мы начинаем с 0!
@@ -119,12 +122,10 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));
-    glEnableVertexAttribArray(2);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
@@ -156,6 +157,12 @@ int main()
         double now = glfwGetTime();
         double deltaTime = now - lastUpdateTime;
 
+
+        //logTime++;
+        //if (logTime >= maxLogTime)
+            //logTime = 0 , std::cout << 1 / deltaTime << std::endl;
+
+
         if ((now - lastFrameTime) >= fpsLimit)
         {
 
@@ -163,6 +170,8 @@ int main()
             world.update();
             if (player != nullptr)
                 player->update();
+            //world.updateMapSamplerS(glm::ivec3(1,1,1));
+            world.updateMapSampler();
             render();
 
             lastFrameTime = now;
@@ -260,7 +269,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         if (key == GLFW_KEY_E)
             origin1.y--;
         if (key == GLFW_KEY_F)
-            player->setFlight(!player->isFlying());
+            player->setFlight(!player->isFlying()), player->setVelocity(glm::vec3(0.));
         if (key == GLFW_KEY_G)
             placing = true;
         if (key == GLFW_KEY_LEFT_SHIFT)

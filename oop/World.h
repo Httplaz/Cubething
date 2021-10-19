@@ -18,8 +18,8 @@ class World
 		GLubyte* map = nullptr;
 		int load = 5;
 		glm::ivec3 chunkOffset = glm::vec3(0.,0.,0.);
-		//Camera* camera = nullptr;
 		Chunk* loadedChunks;
+		bool* loadedChunksChanged;
 		WorldGenerator * worldGenerator = nullptr;
 
 	public:
@@ -29,6 +29,7 @@ class World
 		~World();
 		GLuint getMapSampler();
 		void updateMapSampler();
+		void updateMapSamplerS(glm::ivec3 pos);
 		void update();
 		void saveChunks();
 		void placeCube(glm::ivec3 pos, glm::ivec3 cube);
@@ -37,6 +38,7 @@ class World
 		glm::ivec3 getSize();
 		glm::ivec3 getChunkOffset();
 		Chunk getChunk(int x, int y, int z);
+		Chunk getChunkAbs(int x, int y, int z);
 		void setWorldGenerator(WorldGenerator* gen);
 		glm::vec3 updateLoaded(glm::vec3 pos);
 };
