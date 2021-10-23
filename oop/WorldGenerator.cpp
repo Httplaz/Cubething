@@ -15,8 +15,8 @@ glm::ivec2 WorldGenerator::getCube(glm::ivec3 pos)
     float sinz = abs(sin(glm::radians(180. * pos.z / 16.)));
     //float sinz = 1;
 
-    //int h = (int)(height * (0.5 + sinx * sinz / 2.));
-    int h = height/2;// Chunk::getSize().y / 2;
+    //int h = (int)(height * (0.6 + sinx * sinz / 2.));
+    int h = height / 2;// *(0.5f + abs(sin(pos.x / 400.f) * cos(pos.z / 900.f)));
     //return glm::vec2(0, 0);
     //if (this == nullptr)
         //h /= a[0];
@@ -24,6 +24,7 @@ glm::ivec2 WorldGenerator::getCube(glm::ivec3 pos)
         //return glm::ivec2(3, 0);
     //else
         //return glm::ivec2(1, 1);
+    //return glm::vec2(0., 0.);
     if (pos.y == h-1)
         return glm::vec2(1., 1.);
     else if (pos.y < h)

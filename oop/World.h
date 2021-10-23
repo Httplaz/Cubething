@@ -5,6 +5,7 @@
 #include "WorldGenerator.h"
 #include "Database.h"
 #include <iostream>;
+#include "Octree.h"
 
 //class Chunk;
 
@@ -16,11 +17,15 @@ class World
 		int width;
 		int depth;
 		GLubyte* map = nullptr;
-		int load = 5;
+		int load = 6;
+		bool samplerLoaded = false;
 		glm::ivec3 chunkOffset = glm::vec3(0.,0.,0.);
 		Chunk* loadedChunks;
 		bool* loadedChunksChanged;
 		WorldGenerator * worldGenerator = nullptr;
+		int mipmapLevel = 5;
+
+		GLubyte** mipmap;
 
 	public:
 		World();

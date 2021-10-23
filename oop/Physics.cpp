@@ -1,4 +1,5 @@
 #include "Physics.h"
+#define gf 2
 
 glm::ivec3 Physics::raycastCube(glm::vec3 pos, glm::vec3 dir, GLubyte* map, glm::ivec3 size)
 {
@@ -67,7 +68,7 @@ glm::ivec3 Physics::getCube(glm::ivec3 pos, GLubyte* map, glm::ivec3 mapSize)
     if (pos.x >= 0 && pos.x < mapSize.x && pos.y >= 0 && pos.y < mapSize.y && pos.z >= 0 && pos.z < mapSize.z)
     {
         int i = mapSize.y * mapSize.x * pos.z + mapSize.x * pos.y + pos.x;
-        return glm::ivec3(map[i * 4], map[i * 4 + 1], map[i * 4 + 2]);
+        return glm::ivec3(map[i * gf], map[i * gf + 1], map[i * gf + 2]);
     }
     else
         return glm::ivec3(0, 0, 0);

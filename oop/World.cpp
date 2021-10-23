@@ -1,12 +1,17 @@
 #include "World.h"
+#define gf 2
 
 World::World() { map = nullptr; }
 
 World::World(int w, int h, int d,  WorldGenerator* worldGen) : width(w), height(h), depth(d), worldGenerator(worldGen)
 {
-	map = new GLubyte[4 * width * height * depth];
-	for (int i = 0; i < 4 * width * height * depth; i++)
-		map[i] = 1;
+	glm::ivec3 cs = Chunk::getSize();
+	width = load * cs.x;
+	height = cs.y;
+	depth = load * cs.z;
+	map = new GLubyte[gf * width * height * depth];
+	for (int i = 0; i < gf * width * height * depth; i++)
+		map[i] = 3;
 
 
 	loadedChunks = new Chunk[load * load];
@@ -17,6 +22,16 @@ World::World(int w, int h, int d,  WorldGenerator* worldGen) : width(w), height(
 			loadedChunks[i * load + j] = getChunkAbs(i, 0, j);
 			loadedChunksChanged[i * load + j] = false;
 		}
+
+	mipmap = new GLubyte * [6];
+
+	for (int i = 0, sc=8; i < mipmapLevel; i++, sc*=8)
+	{
+		mipmap[i] = new GLubyte[gf * width * height * depth / sc];
+		for (int j = 0; j < gf * width * height * depth / sc; j++)
+			mipmap[i][j] = 0;
+	}
+
 }
 
 World& World::operator=(const World& w)
@@ -32,6 +47,7 @@ World& World::operator=(const World& w)
 	loadedChunksChanged = w.loadedChunksChanged;
 	loadedChunks = w.loadedChunks;
 	worldGenerator = w.worldGenerator;
+	mipmap = w.mipmap;
 	return *this;
 }
 
@@ -47,6 +63,14 @@ World::~World()
 }
 void World::updateMapSampler()
 {
+	for (int i = 0, sc = 8; i < mipmapLevel; i++, sc *= 8)
+		for (int j = 0; j < gf * width * height * depth / sc; j++)
+		{
+			mipmap[i][j] = 0;
+			//if (j > 11)
+				//mipmap[i][j] = 1;
+		}
+
 	glm::ivec3 chunkSize = Chunk::getSize();
 	for (int i = 0; i < load; i++)
 		for (int j = 0; j < load; j++)
@@ -59,31 +83,77 @@ void World::updateMapSampler()
 					{
 						int k = height * width * z + width * y + x;
 						glm::ivec3 cube = loadedChunks[i * load + j].getCube(glm::ivec3(x-x0, y, z-z0));
-						map[k * 4] = cube.x;
-						map[k * 4 + 1] = cube.y;
+						map[k * gf] = cube.x;
+						map[k * gf + 1] = cube.y;
+						int sc = 2;
+						if (cube.x > 0)
+							for (int i = 0; i < mipmapLevel; i++)
+							{
+								int x1 = x / sc, y1 = y / sc, z1 = z / sc, width1 = width / sc, height1 = height / sc, depth1 = depth / sc;
+								int k1 = height1 * width1 * z1 + width1 * y1 + x1;
+								mipmap[i][k1 * gf] = 1;
+								mipmap[i][k1 * gf + 1] = 0;
+								sc *= 2;
+							}
 					}
 		}
-	glGenTextures(1, &mapSampler);
-	glBindTexture(GL_TEXTURE_3D, mapSampler);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA, width, height, depth, 0, GL_BGRA_EXT, GL_UNSIGNED_INT_8_8_8_8_REV, map);
+	if (!samplerLoaded)
+	{
+		glGenTextures(1, &mapSampler);
+		glBindTexture(GL_TEXTURE_3D, mapSampler);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_3D, GL_GENERATE_MIPMAP, GL_TRUE);
+		glTexImage3D(GL_TEXTURE_3D, 0, GL_RG8UI, width, height, depth, 0, GL_RG_INTEGER, GL_UNSIGNED_BYTE, map);
+
+		for (int i = 0, sc=2; i < mipmapLevel; i++, sc*=2)
+		{
+			glTexImage3D(GL_TEXTURE_3D, i + 1, GL_RG8UI, width / sc, height / sc, depth / sc, 0, GL_RG_INTEGER, GL_UNSIGNED_BYTE, mipmap[i]);
+
+		}
+		samplerLoaded++;
+	}
+	else
+	{
+		glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, width, height, depth, GL_RG_INTEGER, GL_UNSIGNED_BYTE, map);
+		for (int i = 0, sc = 2; i < mipmapLevel; i++, sc *= 2)
+		{
+			glTexSubImage3D(GL_TEXTURE_3D, i+1, 0, 0, 0, width / sc, height / sc, depth / sc, GL_RG_INTEGER, GL_UNSIGNED_BYTE, mipmap[i]);
+		}
+	}
+	//glTexImage3D(GL_TEXTURE_3D, 1, GL_RG8UI, width/2, height/2, depth/2, 0, GL_RG_INTEGER, GL_UNSIGNED_BYTE, map1);
+
+	//glGenerateMipmap(GL_TEXTURE_3D);
 }
 
 void World::updateMapSamplerS(glm::ivec3 pos)
 {
-	//std::cout << pos.x << " " << pos.y << " " << pos.z << std::endl;
-
-
+	//for (int i = 0, sc = 8; i < mipmapLevel; i++, sc *= 8)
+		//for (int j = 0; j < gf * width * height * depth / sc; j++)
+			//mipmap[i][j] = 0;
 	int k = height * width * pos.z + width * pos.y + pos.x;
 
 	glm::ivec3 cube = getCube(pos);
-	map[k * 4] = cube.x;
-	map[k * 4 + 1] = cube.y;
+	map[k * gf] = cube.x;
+	map[k * gf + 1] = cube.y;
+	int sc = 2;
+	if (cube.x > 0)
+		for (int i = 0; i < mipmapLevel; i++)
+		{
+			int x1 = pos.x / sc, y1 = pos.y / sc, z1 = pos.z / sc, width1 = width / sc, height1 = height / sc, depth1 = depth / sc;
+			int k1 = height1 * width1 * z1 + width1 * y1 + x1;
+			mipmap[i][k1 * gf] = 1;
+			mipmap[i][k1 * gf + 1] = 0;
+			sc *= 2;
+		}
 
 
-	//glTexSubImage3D(GL_TEXTURE_3D, 0, pos.x, pos.y, pos.z, 1,1,1, GL_BGRA_EXT, GL_UNSIGNED_INT_8_8_8_8_REV, map+k*4);
-	glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, width, height, depth, GL_BGRA_EXT, GL_UNSIGNED_INT_8_8_8_8_REV, map);
+	glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, width, height, depth, GL_RG_INTEGER, GL_UNSIGNED_BYTE, map);
+		for (int i = 0, sc = 2; i < mipmapLevel; i++, sc *= 2)
+		{
+			glTexSubImage3D(GL_TEXTURE_3D, i+1, 0, 0, 0, width / sc, height / sc, depth / sc, GL_RG_INTEGER, GL_UNSIGNED_BYTE, mipmap[i]);
+		}
+
 }
 
 GLuint World::getMapSampler()
@@ -148,10 +218,16 @@ Chunk World::getChunk(int x, int y, int z)
 
 Chunk World::getChunkAbs(int x, int y, int z)
 {
+	//return Chunk(x, z, worldGenerator);
+
 	Chunk* ch = Database::getChunk(x, y, z);
 	if (ch == nullptr)
 		return Chunk(x, z, worldGenerator);
 	else
+	{
+		if (ch->getMap() == nullptr)
+			std::cout << "WTF" << " " << x << " " << z;
+	}
 		return *ch;
 }
 
@@ -183,6 +259,8 @@ glm::vec3 World::updateLoaded(glm::vec3 pos)
 		for (int i = 0; i < load; i++)
 			for (int j = 0; j < load; j++)
 				newLoadedChunks[i * load + j] = getChunk(chunkOffset.x + i + deltaChunks.x, chunkOffset.y, chunkOffset.z + j + deltaChunks.y);
+		for (int i = 0; i < load * load; i++)
+			loadedChunks[i].utilize();
 		delete[] loadedChunks;
 		loadedChunks = newLoadedChunks;
 		for (int i = 0; i < load * load; i++)

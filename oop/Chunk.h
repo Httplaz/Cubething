@@ -2,13 +2,15 @@
 #include <GL/glew.h>;
 #include <glm/glm.hpp>
 #include "WorldGenerator.h"
+#include "Octree.h"
+#define gf 2
 
 class Chunk
 {
 	private:
 		int x;
 		int z;
-		GLubyte* map;
+		GLubyte* map = nullptr;
 		static glm::ivec3 size;
 		//static int width;
 	public:
@@ -16,6 +18,7 @@ class Chunk
 		Chunk(int x, int z);
 		Chunk(int x, int z, WorldGenerator* wg);
 		~Chunk();
+		void utilize();
 		Chunk& operator = (const Chunk& ch);
 		static glm::ivec3 getSize();
 		GLubyte* getMap();

@@ -46,7 +46,7 @@ void Player::update()
 
 	
 
-	if (Physics::collideEntity(position, glm::vec3(0, -0.3, 0), camera->getRotation(), world->getMap(), world->getSize()) == position)
+	if (Physics::collideEntity(position, glm::vec3(0, -0.3, 0), camera->getRotation(), world->getMap(), world->getSize()) == position && !flight)
 		grounded = true;
 	else
 		grounded = false;

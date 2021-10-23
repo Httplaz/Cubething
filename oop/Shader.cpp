@@ -39,7 +39,7 @@ Shader::Shader(const GLchar * vertexPath, const GLchar * fragmentPath)
     // 2. Сборка шейдеров
     GLuint vertex, fragment;
     GLint success;
-    GLchar infoLog[512];
+    GLchar infoLog[4096];
 
     // Вершинный шейдер
     vertex = glCreateShader(GL_VERTEX_SHADER);
@@ -49,9 +49,11 @@ Shader::Shader(const GLchar * vertexPath, const GLchar * fragmentPath)
     glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
     if (!success)
     {
-        glGetShaderInfoLog(vertex, 512, NULL, infoLog);
+        glGetShaderInfoLog(vertex, 4096, NULL, infoLog);
         std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
     };
+    glGetShaderInfoLog(vertex, 512, NULL, infoLog);
+    std::cout << "VERTEX SHADER INFO\n" << infoLog << std::endl;
 
     // Аналогично для фрагментного шейдера
     fragment = glCreateShader(GL_FRAGMENT_SHADER);
@@ -61,9 +63,12 @@ Shader::Shader(const GLchar * vertexPath, const GLchar * fragmentPath)
     glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
     if (!success)
     {
-        glGetShaderInfoLog(vertex, 512, NULL, infoLog);
+        glGetShaderInfoLog(vertex, 4096, NULL, infoLog);
         std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
     };
+
+    glGetShaderInfoLog(vertex, 512, NULL, infoLog);
+    std::cout << "FRAGMENT SHADER INFO\n" << infoLog << std::endl;
 
     // Шейдерная программа
     this->program = glCreateProgram();
@@ -74,10 +79,11 @@ Shader::Shader(const GLchar * vertexPath, const GLchar * fragmentPath)
     glGetProgramiv(this->program, GL_LINK_STATUS, &success);
     if (!success)
     {
-        glGetProgramInfoLog(this->program, 512, NULL, infoLog);
+        glGetProgramInfoLog(this->program, 4096, NULL, infoLog);
         std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
     }
-
+    glGetProgramInfoLog(this->program, 512, NULL, infoLog);
+    std::cout << "SHADER PROGRAM INFO\n" << infoLog << std::endl;
     // Удаляем шейдеры, поскольку они уже в программу и нам больше не нужны.
     glDeleteShader(vertex);
     glDeleteShader(fragment);
