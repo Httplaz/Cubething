@@ -8,6 +8,6 @@ class Database
 private:
 public:
 	static void placeChunk(Chunk c);
-	static Chunk* getChunk(int x, int y, int z);
+	static Chunk getChunk(int x, int y, int z);
 };
 

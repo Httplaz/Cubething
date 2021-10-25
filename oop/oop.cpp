@@ -1,4 +1,7 @@
-﻿#include <iostream>
+﻿// This is an independent project of an individual developer. Dear PVS-Studio, please check it.
+
+// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
+#include <iostream>
 #define PI 3.14512;
 // GLEW
 #define GLEW_STATIC
@@ -18,12 +21,12 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "Player.h"
-#include "Octree.h"
 
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void render();
 
 GLuint WIDTH = 1920, HEIGHT = 1080;
@@ -32,6 +35,7 @@ GLuint VBO, VAO, EBO;
 Shader shader;
 Texture texture;
 Texture texture1;
+Texture texture2;
 World world;
 WorldGenerator worldGenerator;
 Camera * camera = new Camera;
@@ -40,6 +44,10 @@ glm::dvec2 cursorPos;
 glm::ivec3 selectedCube(0);
 //glm::vec3 selectorRayPos(0.);
 float selectedCubeNormale;
+
+int block = 1;
+int maxBlocks = 4;
+glm::ivec3 blocks[] = { glm::ivec3(1,1,0),glm::ivec3(3,0,0), glm::ivec3(7,0,0), glm::ivec3(3,2,0) };
 
 float aspectRatio;
 
@@ -97,6 +105,7 @@ int main()
     glfwSetKeyCallback(window, key_callback);
     glfwSetCursorPosCallback(window, cursor_position_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetScrollCallback(window, scroll_callback);
     glfwGetCursorPos(window, &(cursorPos.y) , &cursorPos.x);
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -114,9 +123,9 @@ int main()
     std::cout << "window initialized\n";
 
     shader = Shader("vert.glsl", "frag.glsl");
-    texture = Texture("tileset.png", 128, 8);
-    texture1 = Texture("normset.png", 128, 8);
-
+    texture = Texture("tileset.png", 64, 8, true);
+    texture1 = Texture("normset.png", 64, 8, true);
+    texture2 = Texture("skysphere.png", 4000, 2000, true);
     std::cout << "shaders and atlas initialized\n";
 
 
@@ -170,7 +179,6 @@ int main()
     //voxels initialise
     camera = new Camera();
     worldGenerator = WorldGenerator(64);
-    world = World(80, 64, 80, &worldGenerator);
     std::cout << "world ready\n";
     world = World(3*Chunk::getSize().x, Chunk::getSize().y, 3*Chunk::getSize().z, &worldGenerator);
     std::cout << "world updated\n";
@@ -201,8 +209,6 @@ int main()
             world.update();
             if (player != nullptr)
                 player->update();
-            world.updateMapSamplerS(glm::ivec3(1,1,1));
-            //world.updateMapSampler();
             render();
 
             lastFrameTime = now;
@@ -236,6 +242,7 @@ void render()
         player->attack();
 
     player->setMovement(origin1);
+    player->selectPlaceable(blocks[block]);
 
 
     glm::vec4 dir = glm::vec4(0., 0., 1., 0.) * camera->getRotation();
@@ -266,6 +273,9 @@ void render()
     GLint normaleAtlasLoc = shader.getUniformLocation("normAtlas");
     glUniform1i(normaleAtlasLoc, 2);
 
+    GLint skysphereLoc = shader.getUniformLocation("skysphere");
+    glUniform1i(skysphereLoc, 4);
+
     GLint mapLoc = shader.getUniformLocation("voxels");
     glUniform1i(mapLoc, 1);
 
@@ -287,6 +297,8 @@ void render()
 
     glActiveTexture(GL_TEXTURE0 + 2);
     glBindTexture(GL_TEXTURE_2D, texture1.getTexture());
+    glActiveTexture(GL_TEXTURE0 + 4);
+    glBindTexture(GL_TEXTURE_2D, texture2.getTexture());
 
     glBindVertexArray(VAO);
 
@@ -401,4 +413,10 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
         placing = true;
     //std::cout << "mouse checked\n";
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+    block += glm::sign(yoffset);
+    block %= maxBlocks;
 }

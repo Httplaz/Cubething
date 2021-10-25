@@ -15,6 +15,6 @@ private:
     GLuint width, height;
 public:
     Texture();
-    Texture(const GLchar* path, GLuint width, GLuint height);
+    Texture(const GLchar* path, GLuint width, GLuint height, bool linear);
     GLuint getTexture();
 };

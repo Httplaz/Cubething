@@ -1,12 +1,27 @@
+// This is an independent project of an individual developer. Dear PVS-Studio, please check it.
+
+// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 #include "Chunk.h"
 
 glm::ivec3 Chunk::size = { 32,64,32 };
 
+Chunk::Chunk(const Chunk& other)
+{
+	if (map != nullptr)
+		delete[] map, map = nullptr;
+	if (other.map != nullptr)
+	{
+		map = new GLubyte[size.x * size.y * size.z * 3];
+		for (int i = 0; i < size.x * size.y * size.z * 3; i++)
+			map[i] = other.map[i];
+	}
+	x = other.x;
+	z = other.z;
+}
+
 Chunk::Chunk()
 {
-	//map = new GLubyte[size.x * size.y * size.z * 3];
-	//for (int i = 0; i < size.x * size.y * size.z * 3; i++)
-		//map[i] = 1;
+	map = nullptr;
 }
 
 Chunk::Chunk(int x, int z) :x(x), z(z)
@@ -20,27 +35,25 @@ Chunk::Chunk(int x, int z, WorldGenerator* wg) : x(x), z(z)
 	wg->fillMap(glm::vec3(x * size.x, 0 * size.y, z * size.z), map, size);
 }
 
-Chunk::~Chunk() //WTF
+Chunk::~Chunk()
 {
-	//int a[1] = { 0 };
-	//int b = 4 / a[0];
-	map = new GLubyte[12];
-	delete[] map;
-	map = nullptr;
-	//map = new GLubyte[0];
-}
+	if (map != nullptr) 
+	{
+		delete[] map;
+	}
 
-void Chunk::utilize()
-{
-	//delete[] map;
 }
-
 
 Chunk& Chunk::operator=(const Chunk& ch)
 {
-	map = new GLubyte[12];
-	delete[] map;
-	map = ch.map;
+	if (map != nullptr)
+		delete[] map, map = nullptr;
+	if (ch.map != nullptr)
+	{
+		map = new GLubyte[size.x * size.y * size.z * 3];
+		for (int i = 0; i < size.x * size.y * size.z * 3; i++)
+			map[i] = ch.map[i];
+	}
 	x = ch.x;
 	z = ch.z;
 	return *this;
@@ -64,8 +77,6 @@ void Chunk::setMap(GLubyte* m)
 
 glm::ivec3 Chunk::getCube(glm::ivec3 pos)
 {
-	if (map == nullptr)
-		std::cout << "NIGGERS";
 	int i = size.y * size.x * pos.z + size.x * pos.y + pos.x;
 		return glm::ivec3(map[i * 3], map[i * 3 + 1], map[i * 3 + 2]);
 }
@@ -83,7 +94,6 @@ glm::ivec3 Chunk::getPosition()
 
 void Chunk::placeCube(glm::ivec3 pos, glm::ivec3 cube)
 {
-	//int i = 0;
 	int i = size.y * size.x * pos.z + size.x * pos.y + pos.x;
 	map[i * 3] = cube.x;
 	map[i * 3 + 1] = cube.y;

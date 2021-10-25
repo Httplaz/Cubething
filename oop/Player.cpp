@@ -1,3 +1,6 @@
+// This is an independent project of an individual developer. Dear PVS-Studio, please check it.
+
+// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 #include "Player.h"
 
 Player::Player(World* w, Camera* c, glm::vec3 p) : world(w), position(p), camera(c)
@@ -11,7 +14,7 @@ Player::Player(World* w, Camera* c, glm::vec3 p) : world(w), position(p), camera
 	sprint = false;
 	grounded = false;
 	flight = true;
-	speed = 0.3f;
+	speed = 0.2f;
 
 	selectedCube = glm::ivec3(0);
 	selectedCubeNormale = glm::ivec3(0);
@@ -93,7 +96,7 @@ void Player::place()
 	{
 		glm::ivec3 cube = selectedCube;
 		if (cube.x != 999)
-			world->placeCube(cube + selectedCubeNormale, glm::ivec3(3, 0, 0)), placeDelay = 9;
+			world->placeCube(cube + selectedCubeNormale, placeable), placeDelay = 9;
 	}
 }
 
@@ -111,6 +114,11 @@ void Player::setVelocity(glm::vec3 v)
 void Player::addVelocity(glm::vec3 dv)
 {
 	velocity+=dv;
+}
+
+void Player::selectPlaceable(glm::ivec3 pl)
+{
+	placeable = pl;
 }
 
 bool Player::isFlying()

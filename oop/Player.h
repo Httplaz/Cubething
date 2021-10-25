@@ -20,6 +20,7 @@ class Player
 		float speed;
 		int placeDelay;
 		int breakDelay;
+		glm::ivec3 placeable;
 public:
 	Player(World* w, Camera* c, glm::vec3 p);
 	void setShift(bool a);
@@ -35,6 +36,7 @@ public:
 	void addVelocity(glm::vec3 dv);
 	void setMovement(glm::vec3 v);
 	void addMovement(glm::vec3 dv);
+	void selectPlaceable(glm::ivec3 pl);
 	glm::vec3 getPosition();
 	bool isFlying();
 	bool isShifting();

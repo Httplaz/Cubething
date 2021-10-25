@@ -1,3 +1,6 @@
+// This is an independent project of an individual developer. Dear PVS-Studio, please check it.
+
+// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 #include "World.h"
 #define gf 2
 
@@ -16,13 +19,16 @@ World::World(int w, int h, int d,  WorldGenerator* worldGen) : width(w), height(
 
 	loadedChunks = new Chunk[load * load];
 	loadedChunksChanged = new bool[load * load];
+	std::cout << "WORLD CONSTRUCTOR CALLED\n";
 	for (int i = 0; i < load; i++)
 		for (int j = 0; j < load; j++) 
 		{
-			loadedChunks[i * load + j] = getChunkAbs(i, 0, j);
+			Chunk ch = getChunkAbs(i, 0, j);
+			loadedChunks[i * load + j] = ch;
+			
 			loadedChunksChanged[i * load + j] = false;
 		}
-
+	std::cout << "WORLD CONSTRUCTOR LOADED CHUNKS";
 	mipmap = new GLubyte * [6];
 
 	for (int i = 0, sc=8; i < mipmapLevel; i++, sc*=8)
@@ -210,25 +216,21 @@ Chunk World::getChunk(int x, int y, int z)
 {
 	int rx = x - chunkOffset.x;
 	int rz = z - chunkOffset.z;
-	if (rx >= 0 && rz >= 0 && rx < load && rz < load)
+	if (rx >= 0 && rz >= 0 && rx < load && rz < load) 
+	{
 		return loadedChunks[rx * load + rz];
+	}
 	else
 		return getChunkAbs(x, y, z);
 }
 
 Chunk World::getChunkAbs(int x, int y, int z)
 {
-	//return Chunk(x, z, worldGenerator);
-
-	Chunk* ch = Database::getChunk(x, y, z);
-	if (ch == nullptr)
+	Chunk ch = Database::getChunk(x, y, z);
+	if(ch.getMap() == nullptr)
 		return Chunk(x, z, worldGenerator);
 	else
-	{
-		if (ch->getMap() == nullptr)
-			std::cout << "WTF" << " " << x << " " << z;
-	}
-		return *ch;
+		return ch;
 }
 
 void World::setWorldGenerator(WorldGenerator* gen)
@@ -238,7 +240,6 @@ void World::setWorldGenerator(WorldGenerator* gen)
 
 glm::vec3 World::updateLoaded(glm::vec3 pos)
 {
-
 	glm::vec3 chunkSize = Chunk().getSize();
 	glm::vec3 playerPos = pos;
 	glm::vec2 deltaChunks(0);
@@ -258,10 +259,14 @@ glm::vec3 World::updateLoaded(glm::vec3 pos)
 		Chunk* newLoadedChunks = new Chunk[load * load];
 		for (int i = 0; i < load; i++)
 			for (int j = 0; j < load; j++)
+			{
+				//Chunk ch = getChunk(i, 0, j);
 				newLoadedChunks[i * load + j] = getChunk(chunkOffset.x + i + deltaChunks.x, chunkOffset.y, chunkOffset.z + j + deltaChunks.y);
-		for (int i = 0; i < load * load; i++)
-			loadedChunks[i].utilize();
+			}
+		//for (int i = 0; i < load * load; i++)
+			//loadedChunks[i].utilize();
 		delete[] loadedChunks;
+		//std::cout << "LOADED CHUNKS DELETED";
 		loadedChunks = newLoadedChunks;
 		for (int i = 0; i < load * load; i++)
 			loadedChunksChanged[i] = false;
