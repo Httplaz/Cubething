@@ -1,5 +1,5 @@
 #pragma once
-#include <GL/glew.h>;
+#include <glad/glad.h>
 #include <glm/glm.hpp>
 #include "WorldGenerator.h"
 #include <iostream>
@@ -27,5 +27,6 @@ class Chunk
 		glm::ivec3 getCube(int x, int y, int z);
 		glm::ivec3 getPosition();
 		void placeCube(glm::ivec3 pos, glm::ivec3 cube);
+		int test;
 };
 

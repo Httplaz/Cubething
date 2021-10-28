@@ -35,9 +35,19 @@ void Player::setFlight(bool a)
 	flight = a;
 }
 
+void Player::setSpeed(float s)
+{
+	speed = s;
+}
+
 void Player::setPosition(glm::vec3 p)
 {
 	position = p;
+}
+
+void Player::setRotation(glm::mat4 m)
+{
+	rotation = m;
 }
 
 void Player::update()
@@ -60,7 +70,7 @@ void Player::update()
 	if (grounded)
 		velocity.y = max(0.f, velocity.y);
 
-
+	
 	if (Physics::collideEntity(position, glm::vec3(0, 0.4, 0), camera->getRotation(), world->getMap(), world->getSize()) == position && !flight)
 		velocity.y = min(velocity.y, -0.1f);
 
@@ -71,7 +81,7 @@ void Player::update()
 		position = posBackup;
 	position = world->updateLoaded(position);
 	camera->setOrigin(position);
-	 
+	
 
 	glm::vec4 dir = glm::vec4(0., 0., 1., 0.) * camera->getRotation();
 	selectedCube = Physics::raycastCube(camera->getOrigin(), glm::vec3(dir.x, dir.y, dir.z), world->getMap(), world->getSize());
@@ -129,6 +139,11 @@ bool Player::isFlying()
 bool Player::isShifting()
 {
 	return shift;
+}
+
+glm::mat4 Player::getRotation()
+{
+	return rotation;
 }
 
 void Player::setMovement(glm::vec3 v)

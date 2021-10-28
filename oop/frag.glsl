@@ -18,16 +18,25 @@ uniform vec3 normales[6] = {vec3(0.,0., -1.), vec3(-1., 0., 0.), vec3(0., -1., 0
 uniform int extents[5] = {37449,4861,585,73,9};
 
 float tilesetSize = 32.;
-float renderDistanceSteps = 50.;
-float renderDistanceMeters = 300.;
+uniform float renderDistanceSteps = 40.;
+uniform float renderDistanceMeters = 300.;
 
 vec3 lightDir = vec3(10.,7.,10.);
 
-float cubeSize(vec3 pos)
+float cubeSize(ivec3 pos)
 {
+    /*vec4 g;
+    float dist = 1.;
+    for (int i=1; i<6; i++)
+    {
+        pos/=2;
+        g = texelFetch(voxels, pos, i);
+        if(g.x>0)
+            return dist;
+        dist*=2;
+    }
+    return dist;*/
     return max(32.-float(texelFetch(voxels, ivec3(pos)/32, 5).x)*32.,max(16.-float(texelFetch(voxels, ivec3(pos)/16, 4).x)*16.,max(8.-float(texelFetch(voxels, ivec3(pos)/8, 0).x)*8., max(4.-float(texelFetch(voxels, ivec3(pos)/4, 2).x)*4., max(2.-float(texelFetch(voxels, ivec3(pos)/2, 1).x)*2., 1.)))));
-    //return max(16-texelFetch(voxels, ivec3(pos)/16, 4).x*16, max(8-texelFetch(voxels, ivec3(pos)/8, 3).x*8, max(4-texelFetch(voxels, ivec3(pos)/4, 2).x*4, max(2-texelFetch(voxels, ivec3(pos)/2, 1).x*2, 1.))));
-    //return max(8-texelFetch(voxels, ivec3(pos)/8, 3).x*8, max(4-texelFetch(voxels, ivec3(pos)/4, 2).x*4, max(2-texelFetch(voxels, ivec3(pos)/2, 1).x*2, 1.)));
 }
 
 vec3 rotateNormale(vec3 normale, vec3 orient)
@@ -40,9 +49,7 @@ vec3 rotateNormale(vec3 normale, vec3 orient)
 vec2 getCube(vec3 x)
 {
     vec4 g = texelFetch(voxels, (ivec3(x)), 0);
-    //if(texelFetch(voxels, ivec3(x)/32, 5).x!=0)
-        //return vec2(7.,0.);
-    return vec2(g.xy);
+    return vec2(g.x, mod(g.y, 10.));
 }
 
 vec3 getNormaleInfo(vec3 pos, vec3 cube)
@@ -71,31 +78,27 @@ vec3 getNormaleInfo(vec3 pos, vec3 cube)
 
 float raycastLight(vec3 pos, vec3 normale, float steps)
 {
-    //vec3 lPos = pos+vec3(100.,60.,100.);
     vec3 dir = lightDir;
     float g = 0;
-    //vec3 dir = vec3(0,1,0);
+    vec3 sdir = sign(dir)/2.;
     for (int i=0; i<steps && pos.y<64; i++)
     {
-        vec3 sdir = sign(dir);
-        float l = cubeSize(pos);
-        //float l = 1.;
-        //float l = 2.;
-        vec3 dist = (vec3(l) - mod(pos, l))*(sdir+vec3(1.))/2. + mod(pos, l)*(sdir-vec3(1.))/-2. + 1e-4;
+        float l = cubeSize(ivec3(pos));
+        vec3 dist = (vec3(l) - mod(pos, l))*(sdir+vec3(0.5)) + mod(pos, l)*(-sdir+vec3(0.5)) + 1e-4;
         vec3 prior = dist/abs(dir);
         float m = min(prior.x, min(prior.y, prior.z));
         pos+=dir*m;
-        vec3 cube = floor(pos);
-        vec2 c = getCube(cube); //cube id + side difference bool
+        //vec3 cube = floor(pos);
+        vec2 c = getCube(pos); //cube id + side difference bool
         //c.x = (c.x>0.? 3:0.);
         if(c.x>=1.) //if not air and in the circle render
         {
-            return 0.2;
+            return 0.0;
         }
   
     }
         
-        return max(1.5*dot(normale, dir), 0.2);
+        return max(1.5*dot(normale, dir), 0.0);
 }
 
 
@@ -109,11 +112,18 @@ vec4 raycast(vec3 pos, vec3 dir)
     float ray0 = length(dir);
     vec3 sdir = sign(dir);
     vec3 adir = abs(dir);
+
+
+    float ambient;
+    float diff;
+    vec3 normale;
+    vec4 sfcolor;
+
     for (int i=0; i<renderDistanceSteps && ray<renderDistanceMeters && !(pos.y>64. && dir.y>0.); i++)
     {
         //dir = normalize(vec3(dir.x, dir.y+dir.z*sin(0.000000000003), dir.z+dir.y*cos(0.000000000003)));
         //dir = normalize(dir-vec3(0,0.06,0));
-        float l = cubeSize(pos);
+        float l = cubeSize(ivec3(pos));
         vec3 dist = (vec3(l) - mod(pos, l))*(sdir+vec3(1.))/2. + mod(pos, l)*(sdir-vec3(1.))/-2. + 1e-4;
         vec3 prior = dist/abs(dir);
         float m = min(prior.x, min(prior.y, prior.z));
@@ -128,18 +138,18 @@ vec4 raycast(vec3 pos, vec3 dir)
         if(c.x>=1.) //if not air and in the circle render
         {
             vec3 normaleInfo = getNormaleInfo(pos, cube); //side-relative position + side number
-            vec3 normale = normales[int(normaleInfo.z)];
-            if(c.y==2 && distance(vec2(0.5), vec2(normaleInfo.x, normaleInfo.y)) <0.5)
+            normale = normales[int(normaleInfo.z)];
+            //if(c.y==2 && distance(vec2(0.5), vec2(normaleInfo.x, normaleInfo.y)) <0.5)
             {
-                dir = reflect(dir, normale);
+                //dir = reflect(dir, normale);
             }
-            else
+            //else
             {
                 pos+=normale*1e-4*1.8;
                 vec2 uv = vec2((normaleInfo.x + c.x-1)/tilesetSize, (1-normaleInfo.y));
                 if(c.y==1)
                     uv.x += 1/tilesetSize*normaleInfo.z;
-                vec3 addNorm = normalize(vec3(textureLod(normAtlas, uv, min(ray/length(adir)*adir.y/2./renderDistanceMeters*ray, 7.)).xyz)*2.-vec3(1.));
+                vec3 addNorm = normalize(vec3(textureLod(normAtlas, uv, min(ray/renderDistanceMeters*ray-2., 7.)).xyz)*2.-vec3(1.));
                 if(advancedGraphics)
                 {
                     switch(int(normaleInfo.z))
@@ -163,23 +173,22 @@ vec4 raycast(vec3 pos, vec3 dir)
                             normale = addNorm.yzx;
                             break;
                     }
-                    //normale = rotateNormale(addNorm, normale);
                 }
-                float ambient = 0.3;
-                float diff = max(dot(normale, lightDir), 0.1);
-                //float diff = 0.;
-                if(advancedGraphics)
-                    diff = raycastLight(pos, normale, renderDistanceSteps-i);
-                float spectacularPower = 0.4;
-                vec3 reflectDir = reflect(-lightDir, normale);
-                float spec = pow(max(dot(dir, reflectDir), 0.0), 32.) * spectacularPower;
-                //spec = 0.;
+                ambient = 0.66;
+                diff = max(dot(normale, lightDir), 0.1);
+                //if(advancedGraphics)
+                {
+                   // diff = max(diff*0.0, raycastLight(pos, normale, renderDistanceSteps-i));
+                }
 
                 vec4 special = vec4(1.);
                 if(cube==selectedCube && normaleInfo.z == selectedCubeNormale)
                     special = vec4(1.5,0.2,0.2,1.);
-                return vec4(textureLod(texAtlas, uv, 5*ray/renderDistanceMeters))*(diff+ambient+spec) * special;
-                //return vec4(vec4(addNorm, 1.))*(diff+ambient+spec) * special;
+                sfcolor = vec4(textureLod(texAtlas, uv, 5*ray/renderDistanceMeters)) * special;
+                if(advancedGraphics)
+                    return sfcolor*(raycastLight(pos, normale, renderDistanceSteps-i) + ambient);
+                else
+                    return sfcolor * (diff+ambient);
             }
         }
   

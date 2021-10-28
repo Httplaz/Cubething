@@ -6,7 +6,8 @@
 #include <iostream>
 #include "lodepng.h"
 
-#include <GL/glew.h>; // Подключаем glew для того, чтобы получить все необходимые заголовочные файлы OpenGL
+//#include <GL/glew.h>; // Подключаем glew для того, чтобы получить все необходимые заголовочные файлы OpenGL
+#include <glad/glad.h>
 
 class Texture
 {

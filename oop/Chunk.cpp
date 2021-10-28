@@ -7,8 +7,8 @@ glm::ivec3 Chunk::size = { 32,64,32 };
 
 Chunk::Chunk(const Chunk& other)
 {
-	if (map != nullptr)
-		delete[] map, map = nullptr;
+	//if (map != nullptr)
+		//delete[] map, map = nullptr;
 	if (other.map != nullptr)
 	{
 		map = new GLubyte[size.x * size.y * size.z * 3];
@@ -17,12 +17,16 @@ Chunk::Chunk(const Chunk& other)
 	}
 	x = other.x;
 	z = other.z;
+	std::cout << "ASSIGNMENT CHUNK OPERATOR CALLED";
 }
 
 Chunk::Chunk()
 {
+	std::cout << "BASUC CHUNK CONSTRUCTOR CALLED\n";
 	map = nullptr;
 }
+
+
 
 Chunk::Chunk(int x, int z) :x(x), z(z)
 {
@@ -33,13 +37,14 @@ Chunk::Chunk(int x, int z, WorldGenerator* wg) : x(x), z(z)
 {
 	map = new GLubyte[size.x * size.y * size.z * 3];
 	wg->fillMap(glm::vec3(x * size.x, 0 * size.y, z * size.z), map, size);
+	//std::cout << "USUAL CHUNK CONSTRUCTOR CALLED\n";
 }
 
 Chunk::~Chunk()
 {
 	if (map != nullptr) 
 	{
-		delete[] map;
+		//delete[] map;
 	}
 
 }
@@ -71,7 +76,7 @@ GLubyte* Chunk::getMap()
 
 void Chunk::setMap(GLubyte* m)
 {
-	free(map);
+	delete[] map;
 	map = m;
 }
 

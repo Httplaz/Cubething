@@ -26,7 +26,9 @@ public:
 	void setShift(bool a);
 	void setSprint(bool a);
 	void setFlight(bool a);
+	void setSpeed(float v);
 	void setPosition(glm::vec3 p);
+	void setRotation(glm::mat4 m);
 	void update();
 	void jump();
 	void attack();
@@ -38,6 +40,7 @@ public:
 	void addMovement(glm::vec3 dv);
 	void selectPlaceable(glm::ivec3 pl);
 	glm::vec3 getPosition();
+	glm::mat4 getRotation();
 	bool isFlying();
 	bool isShifting();
 };

@@ -16,6 +16,7 @@ public:
 	void setOrigin(glm::vec3 pos);
 	glm::vec3 getOrigin();
 	glm::mat4 getRotation();
+	void setRotation(glm::mat4 m);
 	float getSpeed();
 	void translate(glm::vec3 delta);
 	void rotate(float deegrees, glm::vec4 dir);

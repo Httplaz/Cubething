@@ -4,11 +4,13 @@
 #include <iostream>
 #define PI 3.14512;
 // GLEW
-#define GLEW_STATIC
-#include <GL/glew.h>
+//#define GLEW_STATIC
+//#include <GL/glew.h>
+#define GLFW_INCLUDE_NONE
 
 // GLFW
 #include <GLFW/glfw3.h>
+#include <glad/glad.h>
 
 #include "Shader.h"
 #include "Texture.h"
@@ -21,13 +23,23 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "Player.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_opengl3.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "Settings.h"
+
 
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void renderGame();
+void renderGui();
 void render();
+void startGame();
+void loadGame();
+
 
 GLuint WIDTH = 1920, HEIGHT = 1080;
 GLFWwindow* window;
@@ -36,7 +48,7 @@ Shader shader;
 Texture texture;
 Texture texture1;
 Texture texture2;
-World world;
+World* world;
 WorldGenerator worldGenerator;
 Camera * camera = new Camera;
 Player* player;
@@ -56,13 +68,24 @@ bool breaking;
 bool placing;
 bool advancedGraphics = false;
 
+int screenState = 0;
+ImFont* font;
+ImFont* bigFont;
+
+float renderDistanceSteps = 40;
+float renderDistanceMeters = 200;
+int loadingDistance = 6;
+float playerSpeed;
+float fps;
+
+int iframes = 5;
+
+Settings settings;
+
 //glm::vec3 origin = glm::vec3(0., 0., 0.);
 //glm::vec3 origin = glm::vec3(90000., 90000., 90000.);
 //float speed = 0.55f;
 //glm::mat4 rotation = glm::mat3(1.0);
-
-GLuint voxelsTexture;
-
 
 
 
@@ -72,6 +95,22 @@ double lastFrameTime = 0;   // number of seconds since the last frame
 
 int maxLogTime = 100;
 int logTime = 400;
+
+
+void changeState()
+{
+    if (screenState == 0)
+    {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        screenState = 1;
+    }
+    else if (screenState == 1)
+    {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        screenState = 0;
+    }
+}
+
 
 glm::ivec2 getResolution() 
 {
@@ -89,7 +128,7 @@ int main()
     // Set all the required options for GLFW
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
     glm::ivec2 res = getResolution();
@@ -101,6 +140,12 @@ int main()
     window = glfwCreateWindow(WIDTH, HEIGHT, "c444", nullptr, nullptr);
     glfwMakeContextCurrent(window);
 
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+    {
+        std::cout << "Failed to initialize GLAD" << std::endl;
+        return -1;
+    }
+
     // Set the required callback functions
     glfwSetKeyCallback(window, key_callback);
     glfwSetCursorPosCallback(window, cursor_position_callback);
@@ -108,23 +153,44 @@ int main()
     glfwSetScrollCallback(window, scroll_callback);
     glfwGetCursorPos(window, &(cursorPos.y) , &cursorPos.x);
 
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
     // Set this to true so GLEW knows to use a modern approach to retrieving function pointers and extensions
-    glewExperimental = GL_TRUE;
+    //glewExperimental = GL_TRUE;
     // Initialize GLEW to setup the OpenGL Function pointers
-    glewInit();
+    //glewInit();
 
     // Define the viewport dimensions
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     glViewport(0, 0, width, height);
 
+
+
+
+
+
+
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    font = io.Fonts->AddFontFromFileTTF("PTC55F.ttf", 40.0f);
+    bigFont = io.Fonts->AddFontFromFileTTF("PTC55F.ttf", 300.0f);
+    bigFont->FontSize = 100;
+    // Setup Platform/Renderer bindings
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 430 core");
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+
+
+
+
+
     std::cout << "window initialized\n";
 
     shader = Shader("vert.glsl", "frag.glsl");
     texture = Texture("tileset.png", 64, 8, true);
-    texture1 = Texture("normset.png", 64, 8, true);
+    texture1 = Texture("normset.png", 64, 8, false);
     texture2 = Texture("skysphere.png", 4000, 2000, true);
     std::cout << "shaders and atlas initialized\n";
 
@@ -177,24 +243,8 @@ int main()
     std::cout << "opengl data ready\n";
 
     //voxels initialise
-    camera = new Camera();
-    worldGenerator = WorldGenerator(64);
-    std::cout << "world ready\n";
-    world = World(3*Chunk::getSize().x, Chunk::getSize().y, 3*Chunk::getSize().z, &worldGenerator);
-    std::cout << "world updated\n";
-    //camera->setOrigin(glm::vec3(0., 34., 0.));
-    player = new Player(&world, camera, glm::vec3(110., 34., 110.));
-    std::cout << "player ready \n";
-    world.updateMapSampler();
-    std::cout << "world map updated\n";
-
-
-
-
-
-
-
-
+    loadGame();
+    //startGame();
     // Game loop
     while (!glfwWindowShouldClose(window))
     {
@@ -205,18 +255,10 @@ int main()
         if ((now - lastFrameTime) >= fpsLimit)
         {
 
-            glfwPollEvents();
-            world.update();
-            if (player != nullptr)
-                player->update();
             render();
-
             lastFrameTime = now;
 
-            logTime++;
-            if (logTime >= maxLogTime)
-                logTime = 0, std::cout << 1./deltaTime << " fps" << std::endl;
-
+            fps = 1. / deltaTime;
             lastUpdateTime = now;
         }
     }
@@ -228,11 +270,128 @@ int main()
     return 0;
 }
 
+void saveGame()
+{
+    if (screenState == 1)
+    {
+        world->saveChunks();
+        settings.setPlayerCameraRotation(camera->getRotation());
+        settings.setPlayerPosition(player->getPosition() + (glm::vec3)(Chunk::getSize() * world->getChunkOffset()));
+        settings.setPlayerRotation(player->getRotation());
+    }
+    settings.setLoadingDistance(loadingDistance);
+    settings.setRenderDistanceMeters(renderDistanceMeters);
+    settings.setRenderDistanceSteps(renderDistanceSteps);
+    settings.setPlayerSpeed(playerSpeed);
+    settings.saveSettings();
+
+}
+
+void loadGame()
+{
+    settings.loadSettings();
+    loadingDistance = settings.getLoadingDistance();
+    renderDistanceMeters = settings.getRenderDistanceMeters();
+    renderDistanceSteps = settings.getRenderDistanceSteps();
+    playerSpeed = settings.getPlayerSpeed();
+}
+
+void startGame()
+{
+    //settings.loadSettings();
+   // loadingDistance = settings.getLoadingDistance();
+    //renderDistanceMeters = settings.getRenderDistanceMeters();
+    //renderDistanceSteps = settings.getRenderDistanceSteps();
+    glm::mat4 prot = settings.getPlayerRotation();
+    glm::mat4 pcrot = settings.getPlayerCameraRotation();
+    //std::cout << prot.length << std::endl;
+
+    camera = new Camera();
+    camera->setRotation(pcrot);
+    worldGenerator = WorldGenerator(64);
+    std::cout << "world ready\n";
+    world = new World(loadingDistance*2, &worldGenerator);
+    std::cout << "changed\n";
+    //camera->setOrigin(glm::vec3(0., 34., 0.));
+    player = new Player(world, camera, settings.getPlayerPosition());
+    player->setRotation(prot);
+    player->setSpeed(playerSpeed / 200.f);
+    //std::cout << "player ready \n";
+    world->updateMapSampler();
+    std::cout << "world map updated\n";
+    screenState = 1;
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+}
+
 void render()
 {
+    glfwPollEvents();
+
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
+    switch (screenState)
+    {
+    case 0:
+        renderGui();
+        break;
+    case 1:
+        world->update();
+        if (player != nullptr)
+            player->update();
+        renderGame();
+        renderGui();
+        break;
+    }
+    glfwSwapBuffers(window);
+}
+
+void renderGui()
+{
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    ImGuiIO& io = ImGui::GetIO();
+    switch (screenState)
+    {
+    case 0:
+        ImGui::SetNextWindowPos({ 0,0 });
+        ImGui::SetNextWindowSize({ (float)WIDTH,(float)HEIGHT });
+        ImGui::Begin("Menu");
+        ImGui::Text("WASD to move, F to fly, G for ultra graphics");
+        bigFont->FontSize = 400;
+        ImGui::PushFont(bigFont);
+        ImGui::Text("SARATOV CUBES V");
+        ImGui::PushFont(font);
+        ImGui::SliderFloat("render distance steps", &renderDistanceSteps, 10.f, 200.0f);
+        ImGui::SliderFloat("render distance meters", &renderDistanceMeters, 10.f, 600.0f);
+        ImGui::SliderInt("loading distance in chunks", &loadingDistance, 1.f, 60.0f);
+        ImGui::SliderFloat("player speed", &playerSpeed, 0.f, 600.0f);
+        if (ImGui::Button("start"))
+        {
+            startGame();
+        }
+        ImGui::End();
+        break;
+    case 1:
+        //std::cout << "NIGGERS";
+        //ImGui::SetNextWindowPos({ 0,0 });
+        //ImGui::SetNextWindowSize({ (float)WIDTH,(float)HEIGHT });
+        ImGui::Begin("");
+        std::string s = "fps: " + std::to_string(fps);
+        ImGui::Text(s.c_str());
+        ImGui::End();
+        break;
+    }
+    // Render dear imgui into screen
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+}
+
+void renderGame()
+{
 
     if (placing)
         //place();
@@ -246,8 +405,8 @@ void render()
 
 
     glm::vec4 dir = glm::vec4(0., 0., 1., 0.) * camera->getRotation();
-    selectedCube = Physics::raycastCube(camera->getOrigin(), glm::vec3(dir.x, dir.y, dir.z), world.getMap(), world.getSize());
-    glm::vec3 selectorRayPos = Physics::raycastCubeRaw(camera->getOrigin(), glm::vec3(dir.x, dir.y, dir.z), world.getMap(), world.getSize());
+    selectedCube = Physics::raycastCube(camera->getOrigin(), glm::vec3(dir.x, dir.y, dir.z), world->getMap(), world->getSize());
+    glm::vec3 selectorRayPos = Physics::raycastCubeRaw(camera->getOrigin(), glm::vec3(dir.x, dir.y, dir.z), world->getMap(), world->getSize());
     glm::ivec3 norm = Physics::getCubeNormale(selectorRayPos, selectedCube);
     selectedCubeNormale = norm.z;
 
@@ -289,6 +448,12 @@ void render()
     GLint arLoc = shader.getUniformLocation("aspectRatio");
     glUniform1f(arLoc, aspectRatio);
 
+    GLint rdsLoc = shader.getUniformLocation("renderDistanceSteps");
+    glUniform1f(rdsLoc, renderDistanceSteps);
+
+    GLint rdmLoc = shader.getUniformLocation("renderDistanceMeters");
+    glUniform1f(rdmLoc, renderDistanceMeters);
+
 
     shader.use();
 
@@ -303,20 +468,19 @@ void render()
     glBindVertexArray(VAO);
 
     glActiveTexture(GL_TEXTURE0 + 1);
-    glBindTexture(GL_TEXTURE_3D, world.getMapSampler());
+    glBindTexture(GL_TEXTURE_3D, world->getMapSampler());
 
     //glDrawArrays(GL_TRIANGLES, 0, 6);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
-    glfwSwapBuffers(window);
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
 
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-        world.saveChunks(), glfwSetWindowShouldClose(window, GL_TRUE);
+        saveGame(), glfwSetWindowShouldClose(window, GL_TRUE);
 
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
         player->jump();
@@ -359,6 +523,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             origin1.y++;
         if (key == GLFW_KEY_LEFT_SHIFT)
             player->setShift(false);
+        if (key == GLFW_KEY_P)
+            changeState();
     }
 
     if (key == GLFW_KEY_LEFT)
@@ -393,30 +559,44 @@ void cursor_position_callback(GLFWwindow* window, double ypos, double xpos)
     glm::dvec2 newPos = glm::dvec2(xpos, ypos);
     glm::dvec2 delta = newPos - cursorPos;
     cursorPos = newPos;
-    float c = 0.04f;
-    float c1 = 1080. / 1920.;
-    if (delta.x != 0.f)
-        player->rotate(-3.f*c*abs(delta.x), glm::vec4(delta.x, 0.0f, 0.0f, 0.0f));
-    if (delta.y != 0.f)
-        player->rotate(-3.f*c*abs(delta.y)*c1, glm::vec4(0.0f, delta.y, 0.0f, 0.0f));
+    if (screenState == 1) 
+    {
+        if (iframes > 0)
+        {
+            iframes--;
+            return;
+        }
+        float c = 0.04f;
+        float c1 = 1080. / 1920.;
+        if (delta.x != 0.f)
+            player->rotate(-3.f * c * abs(delta.x), glm::vec4(delta.x, 0.0f, 0.0f, 0.0f));
+        if (delta.y != 0.f)
+            player->rotate(-3.f * c * abs(delta.y) * c1, glm::vec4(0.0f, delta.y, 0.0f, 0.0f));
+    }
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
-        breaking = false;
-    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE)
-        placing = false;
+    if (screenState == 1) 
+    {
+        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
+            breaking = false;
+        if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE)
+            placing = false;
 
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
-        breaking = true;
-    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
-        placing = true;
+        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+            breaking = true;
+        if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
+            placing = true;
+    }
     //std::cout << "mouse checked\n";
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    block += glm::sign(yoffset);
-    block %= maxBlocks;
+    if (screenState == 1) 
+    {
+        block += glm::sign(yoffset);
+        block %= maxBlocks;
+    }
 }

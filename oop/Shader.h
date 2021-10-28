@@ -1,14 +1,12 @@
 #pragma once
-#ifndef SHADER_H
-#define SHADER_H
 
 #include <string>
 #include <fstream>
 #include <sstream>
 #include <iostream>
 
-#include <GL/glew.h>; // Подключаем glew для того, чтобы получить все необходимые заголовочные файлы OpenGL
-#endif
+//#include <GL/glew.h>; // Подключаем glew для того, чтобы получить все необходимые заголовочные файлы OpenGL
+#include <glad/glad.h>
 
 class Shader
 { 

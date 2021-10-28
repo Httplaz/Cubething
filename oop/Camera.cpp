@@ -21,6 +21,11 @@ glm::mat4 Camera::getRotation()
 	return rotation;
 }
 
+void Camera::setRotation(glm::mat4 m)
+{
+	rotation = m;
+}
+
 float Camera::getSpeed()
 {
 	return speed;
