@@ -41,7 +41,7 @@ void World::streamSwapMapChunks(int i0, int j0, int i1, int j1)
 
 World::World() { map = nullptr; }
 
-World::World(int ld,  WorldGenerator* worldGen) : width(ld*Chunk::getSize().x), height(Chunk::getSize().x), depth(ld* Chunk::getSize().z), worldGenerator(worldGen), load(ld)
+World::World(int ld,  WorldGenerator* worldGen, MeshRenderer* renderer) : width(ld*Chunk::getSize().x), height(Chunk::getSize().x), depth(ld* Chunk::getSize().z), worldGenerator(worldGen), load(ld), meshRenderer(renderer)
 {
 	glm::ivec3 cs = Chunk::getSize();
 	width = load * cs.x;
@@ -80,46 +80,6 @@ World::World(int ld,  WorldGenerator* worldGen) : width(ld*Chunk::getSize().x), 
 		generationNeeded[i] = true;
 }
 
-World::World(int w, int h, int d,  WorldGenerator* worldGen) : width(w), height(h), depth(d), worldGenerator(worldGen)
-{
-	load = 6;
-	glm::ivec3 cs = Chunk::getSize();
-	width = load * cs.x;
-	height = cs.y;
-	depth = load * cs.z;
-	map = new GLubyte[gf * width * height * depth];
-	for (int i = 0; i < gf * width * height * depth; i++)
-		map[i] = 3;
-
-
-	loadedChunks = new Chunk * [load * load];
-	loadedChunksChanged = new bool[load * load];
-	for (int i = 0; i < load; i++)
-		for (int j = 0; j < load; j++)
-		{
-			loadedChunks[i * load + j] = getChunkAbs(i + chunkOffset.x, 0, j + chunkOffset.z);
-			loadedChunksChanged[i * load + j] = false;
-		}
-	mipmap = new GLubyte * [6];
-
-	for (int i = 0, sc = 8; i < mipmapLevel; i++, sc *= 8)
-	{
-		mipmap[i] = new GLubyte[gf * width * height * depth / sc];
-		for (int j = 0; j < gf * width * height * depth / sc; j++)
-			mipmap[i][j] = 0;
-	}
-	glm::ivec3 chunkSize = Chunk::getSize();
-	mipcdx = new int[mipmapLevel];
-	mipcdz = new int[chunkSize.x * mipmapLevel];
-	mipcdy = new int[chunkSize.z * chunkSize.x * mipmapLevel];
-	loadNeeded = new bool[load * load];
-	for (int i = 0; i < load * load; i++)
-		loadNeeded[i] = true;
-	generationNeeded = new bool[load * load];
-	for (int i = 0; i < load * load; i++)
-		generationNeeded[i] = true;
-
-}
 
 World& World::operator=(const World& w)
 {
@@ -168,7 +128,7 @@ void World::updateMapSampler()
 					//int ck = 0;
 					for (int z = 0; z < chunkSize.z; z++)
 					{
-						
+
 						std::fill(mipcdx, mipcdx + mipmapLevel, 0);
 						for (int x = 0; x < chunkSize.x; x++)
 						{
@@ -202,10 +162,10 @@ void World::updateMapSampler()
 					}
 				}
 			}
+		
 	}
 
 	double t2 = glfwGetTime();
-
 	if (!samplerLoaded)
 	{
 		glGenTextures(1, &mapSampler);
@@ -224,6 +184,7 @@ void World::updateMapSampler()
 	}
 	else
 	{
+		glBindTexture(GL_TEXTURE_3D, mapSampler);
 		glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, width, height, depth, GL_RG_INTEGER, GL_UNSIGNED_BYTE, map);
 		for (int i = 0, sc = 2; i < mipmapLevel; i++, sc *= 2)
 		{
@@ -231,6 +192,58 @@ void World::updateMapSampler()
 		}
 	}
 	double t3 = glfwGetTime();
+	std::cout << "finishing updating sampler\n";
+	updateMapMesh();
+}
+
+void World::updateMapMesh()
+{
+	glm::ivec3 cs = Chunk::getSize();
+	for (int i = 0; i < load; i++)
+		for (int j = 0; j < load; j++)
+			if(loadNeeded[i*load+j])
+				loadedChunks[i * load + j]->prepareRender(map, glm::ivec3(cs.x * i, 0, cs.z * j), glm::ivec3(cs.x * (i + 1), cs.y, cs.z * (j + 1)), width, height, depth), loadedChunks[i * load + j]->prepareRender(map, glm::ivec3(cs.x * i, 0, cs.z * j), glm::ivec3(cs.x * (i + 1), cs.y, cs.z * (j + 1)), width, height, depth);
+	//meshLoaded++;
+	/*if (!meshLoaded)
+	{
+		meshRenderer->clearMesh();
+		//meshRenderer->addWorldMesh(map, glm::ivec3(0), glm::ivec3(width, height, depth), width, height, depth);
+		for (int j = 0; j < load; j++)
+			for (int i = 0; i < load; i++)
+				meshRenderer->addWorldMesh(map, glm::ivec3(cs.x * i, 0, cs.z * j), glm::ivec3(cs.x * (i + 1), cs.y, cs.z * (j + 1)), width, height, depth), loadedChunks[i * load + j]->prepareRender(map, glm::ivec3(cs.x * i, 0, cs.z * j), glm::ivec3(cs.x * (i + 1), cs.y, cs.z * (j + 1)), width, height, depth);
+		meshLoaded++;
+		//glBindVertexArray(0);
+		meshRenderer->createMesh();
+	}
+	else
+	{
+		//meshRenderer->clearMesh();
+		for (int j = 0; j < load; j++)
+			for (int i = 0; i < load; i++)
+				meshRenderer->replaceWorldMesh(map, glm::ivec3(cs.x * i, 0, cs.z * j), glm::ivec3(cs.x * (i + 1), cs.y, cs.z * (j + 1)), width, height, depth), loadedChunks[i * load + j]->prepareRender(map, glm::ivec3(cs.x * i, 0, cs.z * j), glm::ivec3(cs.x * (i + 1), cs.y, cs.z * (j + 1)), width, height, depth);
+
+		meshRenderer->createMesh();
+	}*/
+
+	std::cout << "NEW MESH CREATED\n";
+}
+
+void World::debug()
+{
+	for (int i = 0; i < load; i++)
+		for (int j = 0; j < load; j++)
+			loadedChunks[i * load + j]->render();
+	//std::cout << "RENDERED IDK";
+
+
+	//for (int i = 0; i < 1000; i++)
+		//std::cout << loadedChunks[0]->vertices[i] << " " << meshRenderer->vertices[i] << std::endl;
+
+	//updateMapMesh();
+	//GLubyte* map1 = new GLubyte[width * depth * height * gf];
+	//std::fill(map1, map1 + width * depth * gf, 0);
+	//glBindTexture(GL_TEXTURE_3D, mapSampler);
+	//glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, width, height, depth, GL_RG_INTEGER, GL_UNSIGNED_BYTE, map);
 }
 
 void World::updateMapSamplerS(glm::ivec3 pos)
@@ -250,13 +263,23 @@ void World::updateMapSamplerS(glm::ivec3 pos)
 			sc *= 2;
 		}
 
-
+	glBindTexture(GL_TEXTURE_3D, mapSampler);
 	glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, width, height, depth, GL_RG_INTEGER, GL_UNSIGNED_BYTE, map);
 		for (int i = 0, sc = 2; i < mipmapLevel; i++, sc *= 2)
 		{
 			glTexSubImage3D(GL_TEXTURE_3D, i+1, 0, 0, 0, width / sc, height / sc, depth / sc, GL_RG_INTEGER, GL_UNSIGNED_BYTE, mipmap[i]);
 		}
+		//updateMapMesh();
 
+}
+
+void World::updateMapMeshS(glm::ivec3 pos)
+{
+	glm::ivec3 cs = Chunk::getSize();
+	int i = pos.x / cs.x, j = pos.z / cs.z;
+	loadedChunks[i * load + j]->prepareRender(map, glm::ivec3(cs.x * i, 0, cs.z * j), glm::ivec3(cs.x * (i + 1), cs.y, cs.z * (j + 1)), width, height, depth), loadedChunks[i * load + j]->prepareRender(map, glm::ivec3(cs.x * i, 0, cs.z * j), glm::ivec3(cs.x * (i + 1), cs.y, cs.z * (j + 1)), width, height, depth);
+	//meshRenderer->replaceWorldMesh(map, glm::ivec3(cs.x * i, 0, cs.z * j), glm::ivec3(cs.x * (i + 1), cs.y, cs.z * (j + 1)), width, height, depth);
+	//meshRenderer->createMesh();
 }
 
 GLuint World::getMapSampler()
@@ -266,6 +289,15 @@ GLuint World::getMapSampler()
 
 void World::update()
 {
+	for (int i = 0; i < load; i++)
+		for (int j = 0; j < load; j++)
+			if (loadedChunks[i * load + j]->getLoadingStatus() == 0)
+				loadedChunks[i * load + j]->loadMesh();
+}
+
+void World::render()
+{
+	meshRenderer->render();
 }
 
 void World::saveChunks()
@@ -283,6 +315,17 @@ void World::placeCube(glm::ivec3 pos, glm::ivec3 cube)
 	loadedChunksChanged[chunk.x * load + chunk.z] = true;
 
 	updateMapSamplerS(pos);
+	updateMapMeshS(pos);
+}
+
+void World::setMeshRenderer(MeshRenderer* renderer)
+{
+	meshRenderer = renderer;
+}
+
+MeshRenderer* World::getMeshRenderer()
+{
+	return meshRenderer;
 }
 
 glm::ivec3 World::getCube(glm::ivec3 pos)
@@ -376,7 +419,7 @@ glm::vec3 World::updateLoaded(glm::vec3 pos)
 		for (int i = 0; i < load; i++)
 			for (int j = 0; j < load; j++)
 			{
-				if (generationNeeded[i * load + j]) 
+				if (generationNeeded[i * load + j])
 				{
 					glm::ivec3 lcs = chunkSize;
 					int widthl = width, heightl = height;
@@ -395,18 +438,22 @@ glm::vec3 World::updateLoaded(glm::vec3 pos)
 									//mipmap[l][kl0 * gf + 1] = 0;
 								}
 					}
-					newLoadedChunks[i * load + j] = getChunk(chunkOffset.x + i + deltaChunks.x, chunkOffset.y, chunkOffset.z + j + deltaChunks.y);
+					newLoadedChunks[i * load + j] = getChunk(chunkOffset.x + i + deltaChunks.x, chunkOffset.y, chunkOffset.z + j + deltaChunks.y), newLoadedChunks[i * load + j]->clearMesh();
 				}
 				else
-					newLoadedChunks[i * load + j] = loadedChunks[i * load + j];
+					newLoadedChunks[i * load + j] = loadedChunks[i * load + j], newLoadedChunks[i * load + j]->moveMesh(glm::ivec2(deltaChunks.x * -chunkSize.x, deltaChunks.y * -chunkSize.z));
 			}
 		delete[] loadedChunks;
 		loadedChunks = newLoadedChunks;
 		std::fill(loadedChunksChanged, loadedChunksChanged+load*load, 0);
 		chunkOffset.x += deltaChunks.x;
 		chunkOffset.z += deltaChunks.y;
+		//updateMapMesh();
 		updateMapSampler();
-		std::cout << "LOAD IS " << load << "\n";
+		//updateMapMesh();
+		std::cout << "sampler updated\n";
+		//updateMapMesh();
+		//std::cout << "LOAD IS " << load << "\n";
 	}
 	return playerPos;
 

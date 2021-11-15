@@ -11,11 +11,13 @@ private:
 	glm::vec3 offset = glm::vec3(0., 0., 0.);
 	float speed = 0.20f;
 	glm::mat4 rotation = glm::mat4(1.0);
+	glm::mat4 rotationP = glm::mat4(1.0);
 	glm::mat4 brotation = glm::mat4(1.0);
 public:
 	void setOrigin(glm::vec3 pos);
 	glm::vec3 getOrigin();
 	glm::mat4 getRotation();
+	glm::mat4 getRotationP();
 	void setRotation(glm::mat4 m);
 	float getSpeed();
 	void translate(glm::vec3 delta);

@@ -17,10 +17,12 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_opengl3.h"
 #include "imgui/imgui_impl_glfw.h"
+#include <vector>
+#include <string>
 class Settings
 {
 private:
-	glm::vec3 playerPosition = glm::vec3(110., 34., 110.);
+	glm::vec3 playerPosition = glm::vec3(0.,0., -6.);
 	glm::mat4 playerRotation = glm::mat4(1.);
 	glm::mat4 playerCameraRotation = glm::mat4(1.);
 	float renderDistanceSteps = 40;
@@ -46,5 +48,7 @@ public:
 	void setRenderDistanceMeters(int d);
 	void setLoadingDistance(int d);
 	void setPlayerSpeed(float s);
+	void saveWorlds(std::vector<std::string> worlds);
+	std::vector<std::string> loadWorlds();
 };
 

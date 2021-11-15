@@ -76,9 +76,10 @@ void Player::update()
 
 
 	glm::vec3 posBackup = position;
+	//position += (movement * (shift ? 0.5f : 1.f) + velocity)* speed;
 	position = Physics::collideEntity(position, (movement * (shift ? 0.5f : 1.f) + velocity) * speed, camera->getRotation(), world->getMap(), world->getSize());
-	if ((grounded && shift && !(Physics::collideEntity(position, glm::vec3(0, -0.4, 0), camera->getRotation(), world->getMap(), world->getSize()) == position)))
-		position = posBackup;
+	//if ((grounded && shift && !(Physics::collideEntity(position, glm::vec3(0, -0.4, 0), camera->getRotation(), world->getMap(), world->getSize()) == position)))
+		//position = posBackup;
 	position = world->updateLoaded(position);
 	camera->setOrigin(position);
 	

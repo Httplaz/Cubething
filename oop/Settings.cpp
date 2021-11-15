@@ -40,6 +40,15 @@ int Settings::getLoadingDistance()
 
 void Settings::saveSettings()
 {
+    //worldList.push_back("F");
+    //std::string worldsFilename = "worlds.txt";
+    //std::ofstream worldsFile(worldsFilename, std::ios::out);
+    //for (int i = 0; i < worldList.size(); i++)
+        //worldsFile << worldList[i] << std::endl;
+    //worldsFile.close();
+
+    //std::cout << "FFFFFFFFFFF " << worldList.size() << "\n\n\n\n\n\n\n";
+
     std::string filename = "settings.txt";
     std::ofstream file(filename, std::ios::out | std::ios::binary);
 
@@ -61,11 +70,13 @@ void Settings::loadSettings()
     std::ifstream file(filename, std::ios::out | std::ios::binary);
     if (!file.is_open())
     {
-        //std::cerr << " failed to open file" << std::endl;
+        //addWorld("NIGGERS");
         return;
     }
 
     file.read((char*)(this), sizeof(Settings));
+    //std::cout << "WORLD " << worldList[0] << "\n";
+    //worldList = { "NIGGERS", "FAGGOTS" };
 }
 
 void Settings::setPlayerPosition(glm::vec3 p)
@@ -102,3 +113,25 @@ void Settings::setPlayerSpeed(float s)
 {
     playerSpeed = s;
 }
+
+std::vector<std::string> Settings::loadWorlds()
+{
+    std::string worldsFilename = "worlds.txt";
+    std::ifstream worldsFile(worldsFilename, std::ios::in);
+    std::string line;
+    std::vector<std::string> worlds;
+    while (std::getline(worldsFile, line))
+        worlds.push_back(line);
+    worldsFile.close();
+    return worlds;
+}
+
+void Settings::saveWorlds(std::vector<std::string> worlds)
+{
+    std::string worldsFilename = "worlds.txt";
+    std::ofstream worldsFile(worldsFilename, std::ios::out);
+    for (int i = 0; i < worlds.size(); i++)
+        worldsFile << worlds[i] << std::endl;
+    worldsFile.close();
+}
+

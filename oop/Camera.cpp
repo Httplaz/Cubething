@@ -21,6 +21,11 @@ glm::mat4 Camera::getRotation()
 	return rotation;
 }
 
+glm::mat4 Camera::getRotationP()
+{
+	return rotationP;
+}
+
 void Camera::setRotation(glm::mat4 m)
 {
 	rotation = m;
@@ -41,6 +46,7 @@ void Camera::rotate(float deegrees, glm::vec4 dir)
 {
 	dir = glm::vec4(dir.x,0,dir.z,dir.w) * rotation + glm::vec4(0,dir.y,0,0);
 	rotation = glm::rotate(rotation, glm::radians(deegrees), glm::vec3(dir.x, dir.y, dir.z));
+	rotationP = glm::rotate(rotationP, glm::radians(-deegrees), glm::vec3(dir.x, dir.y, dir.z));
 }
 
 void Camera::rotateAbs(float deegrees, glm::vec4 dir)

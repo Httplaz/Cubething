@@ -2,12 +2,13 @@
 
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 #include "Database.h"
+std::string Database::world = "";
 
 void Database::placeChunk(Chunk* ch)
 {
 	glm::ivec3 s = ch->getSize();
 	glm::ivec3 p = ch->getPosition();
-	std::string filename = ".\\chunks.\\"+std::to_string(p.x) + "." + std::to_string(p.y) + "." + std::to_string(p.z);
+	std::string filename = ".\\chunks.\\" + world + std::to_string(p.x) + "." + std::to_string(p.y) + "." + std::to_string(p.z);
 	std::ofstream file (filename + ".txt", std::ios::out | std::ios::binary);
 
 	// Write to the file
@@ -23,7 +24,7 @@ void Database::placeChunk(Chunk* ch)
 
 Chunk* Database::getChunk(int x, int y, int z)
 {
-	std::string filename = ".\\chunks.\\" + std::to_string(x) + "." + std::to_string(y) + "." + std::to_string(z);
+	std::string filename = ".\\chunks.\\" + world + std::to_string(x) + "." + std::to_string(y) + "." + std::to_string(z);
 	std::ifstream file(filename + ".txt", std::ios::out | std::ios::binary);
 	if(!file.is_open())
 	{ 
@@ -35,4 +36,9 @@ Chunk* Database::getChunk(int x, int y, int z)
 	glm::ivec3 s = chunk->getSize();
 	file.read((char*)chunk->getMap(), sizeof(GLubyte)*s.x*s.y*s.z*3);
 	return chunk;
+}
+
+void Database::setWorld(std::string name)
+{
+	world = name;
 }

@@ -13,13 +13,13 @@ WorldGenerator::WorldGenerator(int h) : height(h)
 
 glm::ivec2 WorldGenerator::getCube(glm::ivec3 pos)
 {
-    float sinx = abs(sin(glm::radians(180. * pos.x / 16.)));
+    float sinx = abs(sin(glm::radians(180. * pos.x / 320.)));
     //float sinx = 0;
-    float sinz = abs(sin(glm::radians(180. * pos.z / 16.)));
+    float sinz = abs(sin(glm::radians(180. * pos.z / 150.)));
     //float sinz = 1;
 
-    //int h = (int)(height * (0.6 + sinx * sinz / 2.));
-    int h = height / 2;// *(0.5f + abs(sin(pos.x / 400.f) * cos(pos.z / 900.f)));
+    //int h = (int)(height * (0.2 + sinx * sinz / 2.));
+    int h = height / 2 *(0.5f + abs(sin(pos.x / 400.f) * cos(pos.z / 900.f)));
     //return glm::vec2(0, 0);
     //if (this == nullptr)
         //h /= a[0];

@@ -102,3 +102,33 @@ GLuint Shader::getUniformLocation(const GLchar* name)
 {
     return glGetUniformLocation(this->program, name);
 }
+
+void Shader::setMat4(glm::mat4 m, std::string name)
+{
+    int loc = getUniformLocation(name.c_str());
+    glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(m));
+}
+
+void Shader::setVec3(glm::vec3 v, std::string name)
+{
+    int loc = getUniformLocation(name.c_str());
+    glUniform3f(loc, v.x, v.y, v.z);
+}
+
+void Shader::setIvec3(glm::ivec3 v, std::string name)
+{
+    int loc = getUniformLocation(name.c_str());
+    glUniform3i(loc, v.x, v.y, v.z);
+}
+
+void Shader::setInt(GLuint i, std::string name)
+{
+    int loc = getUniformLocation(name.c_str());
+    glUniform1i(loc, i);
+}
+
+void Shader::setFloat(GLuint i, std::string name)
+{
+    int loc = getUniformLocation(name.c_str());
+    glUniform1f(loc, i);
+}
