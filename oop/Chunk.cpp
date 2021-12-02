@@ -11,8 +11,8 @@ Chunk::Chunk(const Chunk& other)
 		//delete[] map, map = nullptr;
 	if (other.map != nullptr)
 	{
-		map = new GLubyte[size.x * size.y * size.z * 3];
-		for (int i = 0; i < size.x * size.y * size.z * 3; i++)
+		map = new GLubyte[size.x * size.y * size.z * 2];
+		for (int i = 0; i < size.x * size.y * size.z * 2; i++)
 			map[i] = other.map[i];
 	}
 	x = other.x;
@@ -30,22 +30,20 @@ Chunk::Chunk()
 
 Chunk::Chunk(int x, int z) :x(x), z(z)
 {
-	map = new GLubyte[size.x * size.y * size.z * 3];
+	map = new GLubyte[size.x * size.y * size.z * 2];
 }
 
 Chunk::Chunk(int x, int z, WorldGenerator* wg) : x(x), z(z)
 {
-	map = new GLubyte[size.x * size.y * size.z * 3];
+	map = new GLubyte[size.x * size.y * size.z * 2];
 	wg->fillMap(glm::vec3(x * size.x, 0 * size.y, z * size.z), map, size);
 	//std::cout << "USUAL CHUNK CONSTRUCTOR CALLED\n";
 }
 
 Chunk::~Chunk()
 {
-	if (map != nullptr) 
-	{
-		//delete[] map;
-	}
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
 
 }
 
@@ -55,8 +53,8 @@ Chunk& Chunk::operator=(const Chunk& ch)
 		delete[] map, map = nullptr;
 	if (ch.map != nullptr)
 	{
-		map = new GLubyte[size.x * size.y * size.z * 3];
-		for (int i = 0; i < size.x * size.y * size.z * 3; i++)
+		map = new GLubyte[size.x * size.y * size.z * 2];
+		for (int i = 0; i < size.x * size.y * size.z * 2; i++)
 			map[i] = ch.map[i];
 	}
 	x = ch.x;
@@ -80,18 +78,64 @@ void Chunk::setMap(GLubyte* m)
 	map = m;
 }
 
-void Chunk::buildMesh(GLubyte* m, glm::ivec3 p0, glm::ivec3 p1, int width, int height, int depth)
+void Chunk::setVertices(std::vector<GLfloat> vertices)
 {
-    std::cout << "BUILDING " << p0.x << " " << std::endl;
-    //if (p0.x >= width)
-        //std::cout << "ERROR " << p0.x << std::endl;
-    //std::this_thread::sleep_for(2000);
+    if (this != nullptr) 
+    {
+        this->vertices = vertices;
+        verticesSize = vertices.size();
+        verticesToDraw = verticesSize / 6;
+    }
+}
+
+std::vector<GLfloat> Chunk::buildMesh(GLubyte* m, glm::ivec3 p0, glm::ivec3 p1, int width, int height, int depth, Chunk* chunk)
+{
+    //p0 += glm::ivec3(1);
+    //p1 -= glm::ivec3(1);
+    std::vector<GLfloat> verts;
+    int vertsSize = 0;
     for (int x = p0.x; x < p1.x; x++)
         for (int y = p0.y; y < p1.y; y++)
             for (int z = p0.z; z < p1.z; z++)
             {
                 int k = z * width * height + y * width + x;
-                glm::ivec2 cube = glm::ivec2(m[k * gf], m[k * gf + 1]);
+                int rx = x % size.x;
+                int ry = y % size.y;
+                int rz = z % size.z;
+                glm::ivec2 cube = glm::ivec3(0), cubeUp = glm::ivec3(0), cubeDown = glm::ivec3(0), cubeLeft = glm::ivec3(0), cubeRight = glm::ivec3(0), cubeFront = glm::ivec3(0), cubeBack = glm::ivec3(0);
+                if (true)//(map == nullptr) 
+                //if (map == nullptr) 
+                {
+                    cube = glm::ivec2(m[k * gf], m[k * gf + 1]);
+                    if (x > 0)
+                        cubeLeft = glm::ivec2(m[(k - 1) * gf], m[(k - 1) * gf + 1]);
+                    if (y > 0)
+                        cubeDown = glm::ivec2(m[(k - width) * gf], m[(k - width) * gf + 1]);
+                    if (z > 0)
+                        cubeFront = glm::ivec2(m[(k - width * height) * gf], m[(k - width * height) * gf + 1]);
+                    if (x < width - 1)
+                        cubeRight = glm::ivec2(m[(k + 1) * gf], m[(k + 1) * gf + 1]);
+                    if (y < height-1)
+                        cubeUp = glm::ivec2(m[(k + width) * gf], m[(k + width) * gf + 1]);
+                    if (z < depth - 1)
+                        cubeBack = glm::ivec2(m[(k + width * height) * gf], m[(k + width * height) * gf + 1]);
+                }
+                else
+                {
+                    cube = getCube(rx, ry, rz);
+                    if (x > 0)
+                        cubeLeft = getCube(rx - 1, ry, rz);
+                    if (y > 0)
+                        cubeDown = getCube(rx, ry-1, rz);
+                    if (z > 0)
+                        cubeFront = getCube(rx, ry, rz - 1);
+                    if (x < size.x - 1)
+                        cubeRight = getCube(rx + 1, ry, rz);
+                    if (y < size.x - 1)
+                        cubeUp = getCube(rx, ry + 1, rz);
+                    if (z < size.z - 1)
+                        cubeBack = getCube(rx, ry, rz + 1);
+                }
                 if (cube.x > 0)
                 {
                     //y = -y;
@@ -161,99 +205,52 @@ void Chunk::buildMesh(GLubyte* m, glm::ivec3 p0, glm::ivec3 p1, int width, int h
                         x + 0.5,y,z + 0.5, 4, 0,0,//left
                     };
                     bool sides[6]{ 1,1,1,1,1,1 };
-                    if (z > 0)
-                        if (m[(k - width * height) * gf] != 0)
-                            sides[0] = false;
-                    if (sides[0])
-                    {
-                        vertices.resize(verticesSize + 36);
-                        std::copy(front, front + 36, vertices.begin() + verticesSize);
-                        verticesSize += 36;
-                    }
-                    if (y > 0)
-                        if (m[(k - width) * gf] != 0)
-                            sides[1] = false;
-                    if (sides[1])
-                    {
-                        vertices.resize(verticesSize + 36);
-                        std::copy(down, down + 36, vertices.begin() + verticesSize);
-                        verticesSize += 36;
-                    }
-                    if (x > 0)
-                        if (m[(k - 1) * gf] != 0)
-                            sides[2] = false;
-                    if (sides[2])
-                    {
-                        vertices.resize(verticesSize + 36);
-                        std::copy(right, right + 36, vertices.begin() + verticesSize);
-                        verticesSize += 36;
-                    }
-                    if (z < depth - 1)
-                        if (m[(k + width * height) * gf] != 0)
-                            sides[3] = false;
-                    if (sides[3])
-                    {
-                        vertices.resize(verticesSize + 36);
-                        std::copy(back, back + 36, vertices.begin() + verticesSize);
-                        verticesSize += 36;
-                    }
-                    if (y < height - 1)
-                        if (m[(k + width) * gf] != 0)
-                            sides[4] = false;
-                    if (sides[4])
-                    {
-                        vertices.resize(verticesSize + 36);
-                        std::copy(up, up + 36, vertices.begin() + verticesSize);
-                        verticesSize += 36;
-                    }
-                    if (x < width - 1)
-                        if (m[(k + 1) * gf] != 0)
-                            sides[5] = false;
-                    if (sides[5])
-                    {
-                        vertices.resize(verticesSize + 36);
-                        std::copy(left, left + 36, vertices.begin() + verticesSize);
-                        verticesSize += 36;
-                    }
-                }
-            }
-    verticesToDraw = verticesSize / 6;
-
-    loadingStatus = 0;
-}
-
-void Chunk::function(GLubyte* m, glm::ivec3 p0, glm::ivec3 p1, int width, int height, int depth)
-{
-    std::vector<GLuint> verts;
-    GLuint vertsSize = 0;
-    for (int x = p0.x; x < p1.x; x++)
-        for (int y = p0.y; y < p1.y; y++)
-            for (int z = p0.z; z < p1.z; z++)
-            {
-                int k = z * width * height + y * width + x;
-                GLuint a = m[k*2];
-                glm::ivec2 cube = glm::ivec2(m[k * 2], m[k * 2 + 1]);
-                if (cube.x > 0)
-                {
-                    //y = -y;
-                    GLfloat front[] =
-                    {
-                        x,y,z, 0.f, 0,0,
-                        x + 0.5,y,z, 0.f,1,0,
-                        x + 0.5,y + 0.5,z, 0,1,1,
-
-                        x + 0.5,y + 0.5,z,0,1,1,
-                        x,y + 0.5, z, 0,0,1,
-                        x,y,z, 0,0,0, //front
-                    };
-                    bool sides[6]{ 1,1,1,1,1,1 };
-                    if (z > 0)
-                        if (m[(k - width * height) * gf] != 0)
-                            sides[0] = false;
+                    if (cubeFront.x)
+                        sides[0] = false;
                     if (sides[0])
                     {
                         verts.resize(vertsSize + 36);
-                        //std::copy(front, front + 36, verts.begin() + vertsSize);
+                        std::copy(front, front + 36, verts.begin() + vertsSize);
+                        vertsSize += 36;
+                    }
+                    if (cubeDown.x)
+                        sides[1] = false;
+                    if (sides[1])
+                    {
+                        verts.resize(vertsSize + 36);
+                        std::copy(down, down + 36, verts.begin() + vertsSize);
+                        vertsSize += 36;
+                    }
+                    if (cubeLeft.x)
+                        sides[2] = false;
+                    if (sides[2])
+                    {
+                        verts.resize(vertsSize + 36);
+                        std::copy(right, right + 36, verts.begin() + vertsSize);
+                        vertsSize += 36;
+                    }
+                    if (cubeBack.x)
+                        sides[3] = false;
+                    if (sides[3])
+                    {
+                        verts.resize(vertsSize + 36);
+                        std::copy(back, back + 36, verts.begin() + vertsSize);
+                        vertsSize += 36;
+                    }
+                    if (cubeUp.x)
+                        sides[4] = false;
+                    if (sides[4])
+                    {
+                        verts.resize(vertsSize + 36);
+                        std::copy(up, up + 36, verts.begin() + vertsSize);
+                        vertsSize += 36;
+                    }
+                    if (cubeRight.x)
+                        sides[5] = false;
+                    if (sides[5])
+                    {
+                        verts.resize(vertsSize + 36);
+                        std::copy(left, left + 36, verts.begin() + vertsSize);
                         vertsSize += 36;
                     }
                 }
@@ -261,29 +258,22 @@ void Chunk::function(GLubyte* m, glm::ivec3 p0, glm::ivec3 p1, int width, int he
     verticesToDraw = verticesSize / 6;
 
     loadingStatus = 0;
+    return verts;
 }
 
 void Chunk::prepareRender(GLubyte* m, glm::ivec3 p0, glm::ivec3 p1, int width, int height, int depth)
 {
-    loadingStatus = -1;
-    verticesSize = 0;
-    verticesToDraw = 0;
-    vertices.clear();
-    //v.resize(width * height * depth * 2);
-    //std::copy(m, m + width * height * depth * 2, v.begin());
-    buildMesh(m, p0, p1, width, height, depth);
-    //std::thread thread(&Chunk::function, this, std::ref(m), p0, p1, width, height, depth);
-    //thread.join();
-    //thread.detach();
-    //std::cout << verticesToDraw << "\n";
-
-
+    setVertices(buildMesh(m, p0, p1, width, height, depth,this));
 }
 
 void Chunk::loadMesh()
 {
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
+    if (!GLGenerated) 
+    {
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);
+        GLGenerated = true;
+    }
 
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -339,16 +329,26 @@ void Chunk::endRender()
 {
 }
 
+void Chunk::release()
+{
+    if (map != nullptr)
+    {
+        delete[] map;
+        map = nullptr;
+    }
+}
+
 glm::ivec3 Chunk::getCube(glm::ivec3 pos)
 {
 	int i = size.y * size.x * pos.z + size.x * pos.y + pos.x;
-		return glm::ivec3(map[i * 3], map[i * 3 + 1], map[i * 3 + 2]);
+    return glm::ivec3(map[i * 2], map[i * 2 + 1], 0);// map[i * 2 + 2]);
 }
 
 glm::ivec3 Chunk::getCube(int x0, int y0, int z0)
 {
-	int i = size.y * size.x * z0 + size.x * y0 + x0;
-	return glm::ivec3(map[i * 3], map[i * 3 + 1], map[i * 3 + 2]);
+    int i = size.y * size.x * z0 + size.x * y0 + x0;
+    return glm::ivec3(map[i * 2], map[i * 2 + 1], 0);// map[i * 2 + 2]);
+    return glm::ivec3(0);
 }
 
 glm::ivec3 Chunk::getPosition()
@@ -369,7 +369,7 @@ void Chunk::stLoadingStatus(int ls)
 void Chunk::placeCube(glm::ivec3 pos, glm::ivec3 cube)
 {
 	int i = size.y * size.x * pos.z + size.x * pos.y + pos.x;
-	map[i * 3] = cube.x;
-	map[i * 3 + 1] = cube.y;
-	map[i * 3 + 2] = cube.z;
+	map[i * 2] = cube.x;
+	map[i * 2 + 1] = cube.y;
+	//map[i * 2 + 2] = cube.z;
 }

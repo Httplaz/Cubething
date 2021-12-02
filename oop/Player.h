@@ -21,6 +21,7 @@ class Player
 		int placeDelay;
 		int breakDelay;
 		glm::ivec3 placeable;
+		bool updatedLoaded = false;
 public:
 	Player(World* w, Camera* c, glm::vec3 p);
 	void setShift(bool a);

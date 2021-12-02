@@ -17,6 +17,7 @@ class Chunk
 		GLuint VAO, VBO;
 		int loadingStatus = 0;
 		std::vector<GLubyte> v;
+		bool GLGenerated = false;
 	public:
 		std::vector<GLfloat> vertices;
 		GLuint verticesSize = 0;
@@ -30,14 +31,15 @@ class Chunk
 		static glm::ivec3 getSize();
 		GLubyte* getMap();
 		void setMap(GLubyte* m);
-		void buildMesh(GLubyte* m, glm::ivec3 p0, glm::ivec3 p1, int width, int height, int depth);
-		void function(GLubyte* m, glm::ivec3 p0, glm::ivec3 p1, int width, int height, int depth);
+		void setVertices(std::vector<GLfloat> vertices);
+		std::vector<GLfloat> buildMesh(GLubyte* m, glm::ivec3 p0, glm::ivec3 p1, int width, int height, int depth, Chunk* chunk);
 		void prepareRender(GLubyte* m, glm::ivec3 p0, glm::ivec3 p1, int width, int height, int depth);
 		void loadMesh();
 		void moveMesh(glm::ivec2 delta);
 		void clearMesh();
 		void render();
 		void endRender();
+		void release();
 		glm::ivec3 getCube(glm::ivec3 pos);
 		glm::ivec3 getCube(int x, int y, int z);
 		glm::ivec3 getPosition();

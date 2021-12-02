@@ -81,6 +81,11 @@ void Player::update()
 	//if ((grounded && shift && !(Physics::collideEntity(position, glm::vec3(0, -0.4, 0), camera->getRotation(), world->getMap(), world->getSize()) == position)))
 		//position = posBackup;
 	position = world->updateLoaded(position);
+	if (!updatedLoaded && world->processesFinished())
+	{
+		world->reloadImage();
+		updatedLoaded = true;
+	}
 	camera->setOrigin(position);
 	
 

@@ -327,9 +327,11 @@ void loadGame()
 {
     settings.loadSettings();
     loadingDistance = settings.getLoadingDistance();
+    //loadingDistance = 6;
     renderDistanceMeters = settings.getRenderDistanceMeters();
     renderDistanceSteps = settings.getRenderDistanceSteps();
     playerSpeed = settings.getPlayerSpeed();
+    //playerSpeed = 100;
     worldList = settings.loadWorlds();
 }
 
@@ -367,7 +369,8 @@ void startGame()
     player->setRotation(prot);
     player->setSpeed(playerSpeed / 200.f);
     std::cout << "before map update \n";
-    world->updateMapSampler();
+    //world->updateMapSampler();
+    world->startOffthread();
     std::cout << "world map updated\n";
     screenState = 1;
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -521,10 +524,16 @@ void renderPoly()
     renderer->getGameShader()->setInt(3, "texAtlas");
     renderer->getGameShader()->setIvec3(selectedCube, "selectedCube");
     renderer->getGameShader()->setFloat(selectedCubeNormale, "selectedCubeNormale");
+    glUniform1iv(renderer->getGameShader()->getUniformLocation("chunkOffset"), 288, world->getChunkSamplerOffset());
+    //renderer->getScreenShader()->setInt(5, "chunkOffset");
 
     glActiveTexture(GL_TEXTURE0 + 1);
     glBindTexture(GL_TEXTURE_3D, world->getMapSampler());
 
+    //glActiveTexture(GL_TEXTURE0 + 5);
+    //glBindTexture(GL_TEXTURE_3D, world->getChunkSamplerOffset());
+
+    //renderer->getScreenShader()->setInt(5, "chunkOffset");
 
     world->debug();
     glViewport(0, 0, width / 1., height / 1.);
@@ -694,11 +703,13 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 if (key == GLFW_KEY_LEFT_SHIFT)
                     player->setShift(false);
             }
-            //if (key == GLFW_KEY_P)
+            if (key == GLFW_KEY_P)
                 //world->updateMapSampler();
                 //settings.addWorld("niggers");
                 //settings.worldList.push_back("niggers");
-                //world->debug();
+                //world->deb = !world->deb;
+                //world->updateMipmap();
+                world->reloadImage();
         }
 
         if (key == GLFW_KEY_LEFT)

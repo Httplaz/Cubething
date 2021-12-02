@@ -34,7 +34,7 @@ Chunk* Database::getChunk(int x, int y, int z)
 
 	Chunk* chunk = new Chunk(x,z);
 	glm::ivec3 s = chunk->getSize();
-	file.read((char*)chunk->getMap(), sizeof(GLubyte)*s.x*s.y*s.z*3);
+	file.read((char*)chunk->getMap(), sizeof(GLubyte)*s.x*s.y*s.z*2);
 	return chunk;
 }
 

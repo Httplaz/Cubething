@@ -19,7 +19,7 @@ glm::ivec2 WorldGenerator::getCube(glm::ivec3 pos)
     //float sinz = 1;
 
     //int h = (int)(height * (0.2 + sinx * sinz / 2.));
-    int h = height / 2 *(0.5f + abs(sin(pos.x / 400.f) * cos(pos.z / 900.f)));
+    int h = height / 2;// *(0.5f + abs(sin(pos.x / 400.f) * cos(pos.z / 900.f)));
     //return glm::vec2(0, 0);
     //if (this == nullptr)
         //h /= a[0];
@@ -48,8 +48,8 @@ void WorldGenerator::fillMap(glm::vec3 pos, GLubyte* map, glm::ivec3 mapSize)
             {
                 glm::vec2 cube = getCube({ pos.x+x, pos.y+y, pos.z+z });
                 int i = mapSize.y * mapSize.x * z + mapSize.x * y + x;
-                map[i * 3] = cube.x;
-                map[i * 3 + 1] =  cube.y;
+                map[i * 2] = cube.x;
+                map[i * 2 + 1] =  cube.y;
                 //map[i * 3 + 0] = 1;
                 //map[i * 3 + 1] = 1;
             }

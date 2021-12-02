@@ -18,13 +18,16 @@ out vec2 uv;
 
 uniform float aspectRatio = 1280./1024.;
 
-vec2 getCube(vec3 x)
+vec2 getCube(ivec3 p)
 {
-    vec4 g = texelFetch(voxels, (ivec3(x)), 0);
+    ivec3 chunkPos = ivec3(p.xz%32,0);
+    vec2 chunkOffset = texelFetch(voxels, chunkPos, 6).xy;
+    p.xz+=ivec2(chunkOffset)*32;
+    vec4 g = texelFetch(voxels, p, 0);
     return g.xy;
 }
 
-bool cubeExists(vec3 x)
+bool cubeExists(ivec3 x)
 {
     return getCube(x).x!=0;
 }
@@ -46,14 +49,16 @@ void main()
 
     vec3 cubeCenter = pos-relPos+vec3(0.5);
     vec3 AoCenter = pos-relPos+vec3(0.5)+surfaceNormale;
-    bool side1 = cubeExists(AoCenter+raodir.xww);
-    bool side2 = cubeExists(AoCenter+raodir.wyw);
-    bool side3 = cubeExists(AoCenter+raodir.wwz);
-    bool corner = cubeExists(position+aodir/2.);
-    //occlusion = 1.-float(cubeExists(cubeCenter-surfaceNormale));
-    //occlusion = 1.-float(cubeExists(AoCenter));
+    bool side1 = cubeExists(ivec3(AoCenter+raodir.xww));
+    bool side2 = cubeExists(ivec3(AoCenter+raodir.wyw));
+    bool side3 = cubeExists(ivec3(AoCenter+raodir.wwz));
+    bool corner = cubeExists(ivec3(position+aodir/2.));
+    occlusion = 1.-float(cubeExists(ivec3(cubeCenter-surfaceNormale)));
+    occlusion = 1.-float(cubeExists(ivec3(AoCenter)));
     occlusion = 1.-(float(side1)+float(side2)+float(side3)+float(corner))/3.;
     }
+
+    //occlusion = 1;
 
     uv = texCoord;
     gl_Position = projection*view*model*vec4(position.x,position.y,position.z, 1.0f);

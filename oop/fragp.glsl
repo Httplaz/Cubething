@@ -10,6 +10,8 @@ uniform vec3 normales[6] = {vec3(0.,0., -1.), vec3(-1., 0., 0.), vec3(0., -1., 0
 
 uniform sampler2D texAtlas;
 uniform usampler3D voxels;
+uniform usampler3D voxels1;
+uniform int chunkOffset[288];
 float tilesetSize = 32.;
 
 uniform bool advancedGraphics;
@@ -21,17 +23,21 @@ uniform ivec3 selectedCube;
 uniform float selectedCubeNormale;
 vec3 lightDir = vec3(10.,7.,10.);
 
-
-vec2 getCube(vec3 x)
+vec2 getCube(ivec3 p)
 {
-    vec4 g = texelFetch(voxels, (ivec3(x)), 0);
-    return g.xy;
+    ivec2 chunkPos = (p.xz/32);
+    vec2 co = vec2(chunkOffset[(chunkPos.y*12+chunkPos.x)*2], chunkOffset[(chunkPos.y*12+chunkPos.x)*2+1]);
+    //p.xz+=ivec2(co-chunkPos)*32;
+    return texelFetch(voxels1, p, 0).xy;
+    
 }
 
 
 float cubeSize(ivec3 pos)
 {
-    return max(32.-float(texelFetch(voxels, ivec3(pos)/32, 5).x)*32.,max(16.-float(texelFetch(voxels, ivec3(pos)/16, 4).x)*16.,max(8.-float(texelFetch(voxels, ivec3(pos)/8, 0).x)*8., max(4.-float(texelFetch(voxels, ivec3(pos)/4, 2).x)*4., max(2.-float(texelFetch(voxels, ivec3(pos)/2, 1).x)*2., 1.)))));
+    //return 32;
+    //return texelFetch(voxels, pos, 0).z;
+    return max(32.-float(texelFetch(voxels, pos/32, 5+0).x)*32., max(16.-float(texelFetch(voxels, pos/16, 4+0).x)*16.,max(8.-float(texelFetch(voxels, pos/8, 3+0).x)*8., max(4.-float(texelFetch(voxels, pos/4, 2+0).x)*4., max(2.-float(texelFetch(voxels, pos/2, 1+0).x)*2., 1.)))));
 }
 
 
@@ -40,14 +46,16 @@ float raycastLight(vec3 pos, vec3 normaleF, float steps)
     vec3 dir = lightDir;
     float g = 0;
     vec3 sdir = sign(dir)/2.;
+    ivec3 ipos;
     for (int i=0; i<steps && pos.y<64. && pos.y>=0.; i++)
     {
-        float l = cubeSize(ivec3(pos));
+        ipos = ivec3(pos);
+        float l = cubeSize(ipos);
         vec3 dist = (vec3(l) - mod(pos, l))*(sdir+vec3(0.5)) + mod(pos, l)*(-sdir+vec3(0.5)) + 1e-4;
         vec3 prior = dist/abs(dir);
         float m = min(prior.x, min(prior.y, prior.z));
         pos+=dir*m;
-        vec2 c = getCube(pos); //cube id + side difference bool
+        vec2 c = getCube(ipos); //cube id + side difference bool
         if(c.x>=1.) //if not air and in the circle render
         {
             return 0.;
@@ -73,7 +81,7 @@ void main()
     vec3 dist = position-origin;
     float ray = length(dist);
     vec3 c = position-normales[int(norm)]*0.5;
-    vec2 cube = getCube(c);
+    vec2 cube = getCube(ivec3(c));
     float tcdx = (cube.y==1.? norm:0);
     vec2 uv1 = vec2(1.)-uv;
     vec2 tc = vec2((cube.x+tcdx-1+uv1.x)/tilesetSize, uv1.y);
